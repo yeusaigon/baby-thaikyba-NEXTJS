@@ -887,6 +887,7 @@ export default function AdminDashboard() {
                             ) : (
                                 <Link 
                                     href="/admin/sokhambenh?action=add" 
+                                    replace
                                     style={{ 
                                         background: 'rgba(16, 185, 129, 0.04)', 
                                         padding: '16px', 
@@ -926,13 +927,14 @@ export default function AdminDashboard() {
                                             {latestFood.calories || 0} kcal • {latestFood.datetime ? latestFood.datetime.split('T')[1]?.substring(0, 5) : ''}
                                         </span>
                                     </div>
-                                    <Link href="/admin/dinh-duong" className="btn-quick-add" title="Xem nhật ký ăn uống">
+                                    <Link href="/admin/dinh-duong" replace className="btn-quick-add" title="Xem nhật ký ăn uống">
                                         <IoAddOutline size={20} />
                                     </Link>
                                 </div>
                             ) : (
                                 <Link 
                                     href="/admin/dinh-duong"
+                                    replace
                                     style={{ 
                                         background: 'rgba(249, 115, 22, 0.04)', 
                                         padding: '16px', 
@@ -1013,6 +1015,7 @@ export default function AdminDashboard() {
                             {visibleUtils.map(item => (
                                 <Link 
                                     href={item.target} 
+                                    replace
                                     key={item.id} 
                                     className={`util-item util-${item.id}`}
                                 >
