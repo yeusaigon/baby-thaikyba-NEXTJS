@@ -87,7 +87,7 @@ export default function LandingPage() {
                         {/* Thay thế logo nhỏ bằng một hình cover lớn cho PC, ở đây dùng tạm logo bự nhưng có hiệu ứng nổi (floating-card) */}
                         <div style={{ position: 'relative', width: '100%', maxWidth: '350px' }}>
                             <img 
-                                src="https://blogger.googleusercontent.com/img/a/AVvXsEjYY_ehzxMTeFo4YFBWdvWLraE7CfCR22JwlCd7e3jzDCFpw4fvee5auJY_I9HfaIS5vrqdvL5oix904UelcuMU1IvsOj4jM_HpGuaj7_UZXSKXfxVRrmetba59Xuhh9KFXo_oc4hw6G_J1Qf_DrHEYGnSMYOr0Zx1KiX-HjWKrZV7BjMKICSjzVf-XNyU" 
+                                src="/logo.png" 
                                 alt="ThaiKyPro App Cover"
                                 className="hero-image logo-bounce"
                                 style={{ background: 'white', padding: '30px', borderRadius: '50%' }}

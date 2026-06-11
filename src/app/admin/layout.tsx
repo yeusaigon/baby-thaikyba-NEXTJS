@@ -31,7 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div id="splash-screen">
                 <div className="splash-logo-container">
                     <img 
-                        src="https://blogger.googleusercontent.com/img/a/AVvXsEjYY_ehzxMTeFo4YFBWdvWLraE7CfCR22JwlCd7e3jzDCFpw4fvee5auJY_I9HfaIS5vrqdvL5oix904UelcuMU1IvsOj4jM_HpGuaj7_UZXSKXfxVRrmetba59Xuhh9KFXo_oc4hw6G_J1Qf_DrHEYGnSMYOr0Zx1KiX-HjWKrZV7BjMKICSjzVf-XNyU" 
+                        src="/logo.png" 
                         className="splash-logo" 
                         alt="Splash Logo" 
                     />

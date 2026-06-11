@@ -144,6 +144,11 @@ export default function AdminDashboard() {
                     100% { background-position: 200% 0; }
                 }
                 
+                .dashboard-container {
+                    width: 100%;
+                    padding: 16px;
+                    box-sizing: border-box;
+                }
                 .dashboard-flex-layout {
                     display: flex;
                     flex-direction: column;
@@ -324,7 +329,7 @@ export default function AdminDashboard() {
                 /* 2. VITALS & STATS GRID */
                 .vitals-grid { 
                     display: grid; 
-                    grid-template-columns: repeat(4, 1fr); 
+                    grid-template-columns: repeat(4, minmax(0, 1fr)); 
                     gap: 16px; 
                     position: relative; 
                     z-index: 2; 
@@ -338,6 +343,7 @@ export default function AdminDashboard() {
                     border: 1px solid rgba(255, 255, 255, 0.7); 
                     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
                     transition: all 0.3s ease;
+                    min-width: 0;
                 }
                 .vital-box:hover {
                     transform: translateY(-3px);
@@ -436,7 +442,7 @@ export default function AdminDashboard() {
                 /* 4. HEALTH TRACKER GRID */
                 .health-tracker-grid {
                     display: grid;
-                    grid-template-columns: 1fr 1fr;
+                    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
                     gap: 20px;
                 }
                 .health-card {
@@ -448,6 +454,7 @@ export default function AdminDashboard() {
                     display: flex;
                     flex-direction: column;
                     gap: 16px;
+                    min-width: 0;
                 }
                 .health-card-title {
                     margin: 0;
@@ -664,7 +671,7 @@ export default function AdminDashboard() {
                 /* 5. APP UTILITIES GRID WITH GLOW EFFECT */
                 .utilities-grid { 
                     display: grid; 
-                    grid-template-columns: repeat(4, 1fr); 
+                    grid-template-columns: repeat(4, minmax(0, 1fr)); 
                     gap: 16px; 
                     margin-top: 8px; 
                 }
@@ -679,6 +686,7 @@ export default function AdminDashboard() {
                     padding: 16px 8px;
                     border-radius: 22px;
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    min-width: 0;
                 }
                 .util-item:hover { 
                     transform: translateY(-4px); 
@@ -749,17 +757,17 @@ export default function AdminDashboard() {
                 /* Responsive design */
                 @media (max-width: 900px) {
                     .health-tracker-grid {
-                        grid-template-columns: 1fr;
+                        grid-template-columns: minmax(0, 1fr);
                         gap: 16px;
                     }
                     .vitals-grid { 
-                        grid-template-columns: 1fr 1fr; 
+                        grid-template-columns: repeat(2, minmax(0, 1fr)); 
                         gap: 12px; 
                     }
                 }
                 @media (max-width: 600px) {
                     .utilities-grid { 
-                        grid-template-columns: repeat(3, 1fr); 
+                        grid-template-columns: repeat(3, minmax(0, 1fr)); 
                         gap: 12px;
                     }
                 }
