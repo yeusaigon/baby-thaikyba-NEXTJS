@@ -1,0 +1,17 @@
+{
+  "name": "ThaiKyPro - Trợ lý thai sản thông minh",
+  "short_name": "ThaiKyPro",
+  "description": "Hành trình 40 tuần hạnh phúc cùng mẹ và bé yêu. Ứng dụng theo dõi và nhắc nhở lịch khám thai.",
+  "start_url": "/admin",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ec4899",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

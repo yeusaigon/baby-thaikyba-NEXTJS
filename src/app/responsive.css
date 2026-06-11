@@ -1,0 +1,261 @@
+/* RESPONSIVE LAYOUT CHO TRANG CHỦ (Landing Page) */
+.landing-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.landing-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+}
+
+.landing-nav .brand {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--primary);
+    text-decoration: none;
+}
+.landing-nav .brand span {
+    color: var(--accent);
+}
+
+.nav-login-btn {
+    background: white;
+    color: var(--primary);
+    border: 2px solid var(--primary-light);
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-soft);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.nav-login-btn:hover {
+    background: var(--primary-light);
+    transform: translateY(-2px);
+}
+
+.hero-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px 0 60px 0;
+    gap: 40px;
+}
+
+.hero-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.hero-image-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin-top: 20px;
+}
+
+.hero-image {
+    width: 100%;
+    height: auto;
+    border-radius: 30px;
+    box-shadow: 0 20px 40px rgba(13, 148, 136, 0.15);
+    transition: transform 0.5s ease;
+}
+
+/* Hiệu ứng kính mờ (Glassmorphism) */
+.floating-card {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.6);
+    padding: 15px 20px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: float-card 4s ease-in-out infinite;
+}
+
+.floating-card.c1 { top: 5%; right: -10px; animation-delay: 0s; }
+.floating-card.c2 { bottom: 10%; left: -10px; animation-delay: 2s; }
+
+@keyframes float-card {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.floating-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.floating-text {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #334155;
+    text-align: left;
+}
+
+/* PC MEDIA QUERY */
+@media (min-width: 992px) {
+    .hero-section {
+        flex-direction: row;
+        text-align: left;
+        padding: 60px 0;
+        min-height: 75vh;
+    }
+    
+    .hero-content {
+        align-items: flex-start;
+        padding-right: 40px;
+    }
+    
+    .feature-grid {
+        margin: 40px 0;
+        width: 100%;
+        max-width: 500px;
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .hero-content h1 {
+        font-size: 3.8rem !important;
+        line-height: 1.15;
+    }
+    
+    .hero-content p {
+        font-size: 1.15rem !important;
+        max-width: 100% !important;
+    }
+    
+    .floating-card.c1 { right: -30px; }
+    .floating-card.c2 { left: -30px; }
+}
+
+/* APP SHELL RESPONSIVE LAYOUT (PC SCREEN >= 1024PX) */
+@media (min-width: 1024px) {
+    /* 1. Permanent Sidebar */
+    .side-menu {
+        transform: translate3d(0, 0, 0) !important;
+        position: fixed !important;
+        box-shadow: 1px 0 15px rgba(0, 0, 0, 0.05) !important;
+        border-radius: 0 !important;
+        width: 280px !important;
+    }
+
+    /* Hide drawer elements on PC */
+    .menu-overlay {
+        display: none !important;
+    }
+    
+    .side-menu-close-btn {
+        display: none !important;
+    }
+
+    /* Shift Header and Main Content */
+    .header {
+        margin-left: 280px !important;
+        padding: 15px 30px !important;
+    }
+
+    #main-content {
+        margin-left: 280px !important;
+    }
+
+    .hamburger-btn {
+        display: none !important;
+    }
+
+    /* 2. Responsive Dashboard Container */
+    .dashboard-container {
+        max-width: 1200px !important;
+        padding: 30px !important;
+        margin: 0 auto !important;
+    }
+
+    .dashboard-flex-layout {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px !important;
+        align-items: start !important;
+    }
+
+    .db-hero {
+        grid-column: span 2 !important;
+    }
+
+    .db-nutrition {
+        margin-bottom: 0 !important;
+    }
+
+    .db-visits {
+        margin-bottom: 0 !important;
+    }
+
+    .db-utils {
+        margin-bottom: 0 !important;
+    }
+
+    .db-sos {
+        margin-top: 0 !important;
+    }
+
+    /* 3. Sổ Khám Bệnh Responsive Layout */
+    .sokhambenh-container {
+        max-width: 1200px !important;
+        padding: 30px !important;
+        padding-bottom: 100px !important;
+        margin: 0 auto !important;
+    }
+
+    /* List Tab Grid */
+    .timeline-container {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px !important;
+    }
+
+    /* Weight tracker layout (side-by-side) */
+    .weight-tracker-container {
+        display: grid !important;
+        grid-template-columns: 1fr 1.2fr !important;
+        gap: 24px !important;
+        align-items: start !important;
+    }
+    
+    /* General Responsive Utility Page Container */
+    .utility-page-container {
+        max-width: 1200px !important;
+        padding: 30px !important;
+        padding-bottom: 100px !important;
+        margin: 0 auto !important;
+    }
+}
+
+.utility-page-container {
+    padding: 20px;
+    padding-bottom: 100px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+
