@@ -93,7 +93,7 @@ export default function LoginPage() {
                     </p>
                 )}
 
-                <Link href="/" replace className="btn-secondary" style={{ 
+                <Link href="/" className="btn-secondary" style={{ 
                     textDecoration: 'none', textAlign: 'center', display: 'flex', 
                     alignItems: 'center', justifyContent: 'center', gap: '8px',
                     marginTop: status ? '15px' : '30px', border: 'none', background: 'transparent'

@@ -167,7 +167,7 @@ export default function LichKhamPage() {
                     </div>
                     <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0' }}>Thiếu thông tin ngày kinh cuối</h4>
                     <p style={{ color: 'var(--text-sub)', fontSize: '0.88rem', margin: '0 0 20px 0', lineHeight: 1.5 }}>Mẹ chưa nhập <b>Ngày kinh cuối (LMP)</b> nên chưa thể tính toán lịch khám thai chính xác.</p>
-                    <Link href="/admin/settings" replace className="btn-primary" style={{ display: 'inline-flex', width: 'auto', padding: '12px 28px', borderRadius: '12px', background: '#8b5cf6', border: 'none', color: 'white', fontWeight: 700, boxShadow: '0 8px 20px rgba(139, 92, 246, 0.25)' }}>
+                    <Link href="/admin/settings" className="btn-primary" style={{ display: 'inline-flex', width: 'auto', padding: '12px 28px', borderRadius: '12px', background: '#8b5cf6', border: 'none', color: 'white', fontWeight: 700, boxShadow: '0 8px 20px rgba(139, 92, 246, 0.25)' }}>
                         Cập nhật hồ sơ ngay
                     </Link>
                 </div>

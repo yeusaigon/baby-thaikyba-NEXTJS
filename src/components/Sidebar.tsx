@@ -172,7 +172,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     {/* Fixed Home link */}
                     <Link 
                         href="/admin" 
-                        replace
                         onClick={onClose} 
                         className={`menu-item-link ${pathname === '/admin' ? 'active' : ''}`} 
                         style={{
@@ -194,7 +193,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         return (
                             <Link 
                                 href={item.target} 
-                                replace
                                 key={item.id} 
                                 onClick={onClose} 
                                 className={`menu-item-link ${isActive ? 'active' : ''}`} 
@@ -216,7 +214,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     {/* Fixed Settings link */}
                     <Link 
                         href="/admin/settings" 
-                        replace
                         onClick={onClose} 
                         className={`menu-item-link ${pathname === '/admin/settings' ? 'active' : ''}`} 
                         style={{

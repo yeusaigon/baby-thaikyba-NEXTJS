@@ -82,6 +82,27 @@ export default function AdminDashboard() {
         };
     }, []);
 
+    useEffect(() => {
+        // Đẩy trạng thái giả lập vào stack lịch sử
+        window.history.pushState(null, '', window.location.href);
+
+        const handlePopState = (e: PopStateEvent) => {
+            // Khi người dùng bấm back ở trang chủ, hỏi xem họ có muốn thoát ứng dụng không
+            if (window.confirm("Bạn có muốn thoát ứng dụng ThaiKyPro không?")) {
+                // Đi lùi tiếp để thoát stack hoặc đóng tab
+                window.history.go(-2);
+            } else {
+                // Nếu không thoát, tiếp tục giữ chân ở trang chủ bằng cách đẩy lại state giả lập
+                window.history.pushState(null, '', window.location.href);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, []);
+
     // Tính tổng chi phí khám thai từ các lịch không bị đánh dấu xóa (deletedAt)
     const activeVisits = visits.filter(v => !v.deletedAt);
     const totalCost = activeVisits.reduce((sum, v) => {
@@ -887,7 +908,6 @@ export default function AdminDashboard() {
                             ) : (
                                 <Link 
                                     href="/admin/sokhambenh?action=add" 
-                                    replace
                                     style={{ 
                                         background: 'rgba(16, 185, 129, 0.04)', 
                                         padding: '16px', 
@@ -927,14 +947,13 @@ export default function AdminDashboard() {
                                             {latestFood.calories || 0} kcal • {latestFood.datetime ? latestFood.datetime.split('T')[1]?.substring(0, 5) : ''}
                                         </span>
                                     </div>
-                                    <Link href="/admin/dinh-duong" replace className="btn-quick-add" title="Xem nhật ký ăn uống">
+                                    <Link href="/admin/dinh-duong" className="btn-quick-add" title="Xem nhật ký ăn uống">
                                         <IoAddOutline size={20} />
                                     </Link>
                                 </div>
                             ) : (
                                 <Link 
                                     href="/admin/dinh-duong"
-                                    replace
                                     style={{ 
                                         background: 'rgba(249, 115, 22, 0.04)', 
                                         padding: '16px', 
@@ -1015,7 +1034,6 @@ export default function AdminDashboard() {
                             {visibleUtils.map(item => (
                                 <Link 
                                     href={item.target} 
-                                    replace
                                     key={item.id} 
                                     className={`util-item util-${item.id}`}
                                 >
