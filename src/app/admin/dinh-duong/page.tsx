@@ -518,11 +518,11 @@ export default function NutritionPage() {
                                     {currentMenu.meals.map((meal, index) => (
                                         <div key={index} className="menu-dish-card">
                                             <div className="menu-dish-time-badge" style={{ backgroundColor: meal.color }}>{meal.emoji} {meal.time}</div>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#1e293b', marginBottom: '4px' }}>{meal.dish}</div>
-                                                <div style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#1e293b', marginBottom: '4px', wordBreak: 'break-word' }}>{meal.dish}</div>
+                                                <div style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '4px', minWidth: 0 }}>
                                                     <IoLeafOutline style={{ flexShrink: 0, marginTop: '2px', color: '#10b981' }} />
-                                                    <span>{meal.note}</span>
+                                                    <span style={{ minWidth: 0, wordBreak: 'break-word' }}>{meal.note}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -872,7 +872,7 @@ export default function NutritionPage() {
                 /* GUIDE / THỰC ĐƠN TAB */
                 .guide-layout {
                     display: grid;
-                    grid-template-columns: 1fr;
+                    grid-template-columns: minmax(0, 1fr);
                     gap: 24px;
                 }
 
@@ -1250,10 +1250,27 @@ export default function NutritionPage() {
                     to { transform: translateY(0); }
                 }
 
+                /* MOBILE RESPONSIVE STYLES */
+                @media (max-width: 576px) {
+                    .menu-header-bar {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 8px;
+                    }
+                    .menu-dish-card {
+                        flex-direction: column;
+                        gap: 12px;
+                        align-items: flex-start;
+                    }
+                    .menu-dish-time-badge {
+                        align-self: flex-start;
+                    }
+                }
+
                 /* PC MEDIA QUERIES (min-width: 992px) */
                 @media (min-width: 992px) {
                     .guide-layout {
-                        grid-template-columns: 260px 1fr;
+                        grid-template-columns: 260px minmax(0, 1fr);
                     }
                     
                     .day-selector-ribbon {
