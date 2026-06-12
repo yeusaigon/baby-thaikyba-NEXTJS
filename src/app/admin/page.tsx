@@ -25,6 +25,7 @@ export default function AdminDashboard() {
     const [waterIntake, setWaterIntake] = useState(1000);
     const [randomQuote, setRandomQuote] = useState('');
     const [showQuoteToast, setShowQuoteToast] = useState(false);
+    const [showExitDialog, setShowExitDialog] = useState(false);
 
     useEffect(() => {
         const index = Math.floor(Math.random() * QUOTES.length);
@@ -131,18 +132,14 @@ export default function AdminDashboard() {
     }, []);
 
     useEffect(() => {
-        // Đẩy trạng thái giả lập vào stack lịch sử
-        window.history.pushState(null, '', window.location.href);
+        // Đẩy trạng thái giả lập vào stack lịch sử để "chặn" nút back
+        window.history.pushState({ page: 'home-guard' }, '', window.location.href);
 
         const handlePopState = (e: PopStateEvent) => {
-            // Khi người dùng bấm back ở trang chủ, hỏi xem họ có muốn thoát ứng dụng không
-            if (window.confirm("Bạn có muốn thoát ứng dụng ThaiKyPro không?")) {
-                // Đi lùi tiếp để thoát stack hoặc đóng tab
-                window.history.go(-2);
-            } else {
-                // Nếu không thoát, tiếp tục giữ chân ở trang chủ bằng cách đẩy lại state giả lập
-                window.history.pushState(null, '', window.location.href);
-            }
+            // Khi người dùng bấm back ở trang chủ → hiện custom exit dialog
+            setShowExitDialog(true);
+            // Đẩy lại state giả lập để giữ nguyên URL (không bị back thật)
+            window.history.pushState({ page: 'home-guard' }, '', window.location.href);
         };
 
         window.addEventListener('popstate', handlePopState);
@@ -150,6 +147,20 @@ export default function AdminDashboard() {
             window.removeEventListener('popstate', handlePopState);
         };
     }, []);
+
+    const handleExitApp = () => {
+        setShowExitDialog(false);
+        // Thử đóng tab (hoạt động khi mở từ PWA hoặc tab mới)
+        window.close();
+        // Fallback: về trang trắng nếu không đóng được
+        setTimeout(() => {
+            window.location.href = 'about:blank';
+        }, 200);
+    };
+
+    const handleStayInApp = () => {
+        setShowExitDialog(false);
+    };
 
     // Tính tổng chi phí khám thai từ các lịch không bị đánh dấu xóa (deletedAt)
     const activeVisits = visits.filter(v => !v.deletedAt);
@@ -335,7 +346,7 @@ export default function AdminDashboard() {
                     .vitals-grid { order: 2; }
                     .baby-growth-card { order: 3; }
                     .health-tracker-grid { order: 4; }
-                    .db-utils { order: 5; }
+                    .db-utils { order: 5; display: none !important; }
                     .db-sos { order: 6; }
 
                     /* Tránh đè nút 3 gạch trôi nổi trên mobile */
@@ -1354,6 +1365,155 @@ export default function AdminDashboard() {
             </div>
 
         </div>
+
+        {/* ===== EXIT APP CONFIRMATION DIALOG ===== */}
+        {showExitDialog && (
+            <div
+                onClick={handleStayInApp}
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 99999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '24px',
+                    background: 'rgba(15, 23, 42, 0.55)',
+                    backdropFilter: 'blur(6px)',
+                    WebkitBackdropFilter: 'blur(6px)',
+                    animation: 'fadeInOverlay 0.2s ease-out',
+                }}
+            >
+                <style jsx>{`
+                    @keyframes fadeInOverlay {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes slideUpDialog {
+                        from { opacity: 0; transform: translateY(24px) scale(0.96); }
+                        to { opacity: 1; transform: translateY(0) scale(1); }
+                    }
+                `}</style>
+                <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                        background: 'white',
+                        borderRadius: '28px',
+                        padding: '32px 28px 24px',
+                        maxWidth: '340px',
+                        width: '100%',
+                        textAlign: 'center',
+                        boxShadow: '0 32px 80px rgba(0,0,0,0.18)',
+                        animation: 'slideUpDialog 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                    }}
+                >
+                    {/* Gradient top accent */}
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0,
+                        height: '4px',
+                        background: 'linear-gradient(90deg, #ec4899, #8b5cf6)',
+                    }} />
+
+                    {/* Icon */}
+                    <div style={{
+                        width: '72px',
+                        height: '72px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #fff1f2, #fce7f3)',
+                        border: '2px solid #ffe4e6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 20px',
+                        fontSize: '2rem',
+                    }}>
+                        🌸
+                    </div>
+
+                    {/* Title */}
+                    <h3 style={{
+                        margin: '0 0 10px',
+                        fontSize: '1.2rem',
+                        fontWeight: 800,
+                        color: '#1e293b',
+                    }}>
+                        Thoát ứng dụng?
+                    </h3>
+
+                    {/* Message */}
+                    <p style={{
+                        margin: '0 0 28px',
+                        fontSize: '0.88rem',
+                        color: '#64748b',
+                        lineHeight: 1.6,
+                        fontWeight: 500,
+                    }}>
+                        Bạn có muốn thoát khỏi <strong style={{ color: '#ec4899' }}>ThaiKyPro</strong> không? Mọi dữ liệu đã được lưu tự động. 💕
+                    </p>
+
+                    {/* Buttons */}
+                    <div style={{
+                        display: 'flex',
+                        gap: '12px',
+                    }}>
+                        <button
+                            onClick={handleStayInApp}
+                            style={{
+                                flex: 1,
+                                padding: '13px',
+                                borderRadius: '14px',
+                                border: '1.5px solid #e2e8f0',
+                                background: '#f8fafc',
+                                color: '#475569',
+                                fontSize: '0.92rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                            }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.background = '#f1f5f9';
+                                e.currentTarget.style.borderColor = '#cbd5e1';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.background = '#f8fafc';
+                                e.currentTarget.style.borderColor = '#e2e8f0';
+                            }}
+                        >
+                            Ở lại 💪
+                        </button>
+                        <button
+                            onClick={handleExitApp}
+                            style={{
+                                flex: 1,
+                                padding: '13px',
+                                borderRadius: '14px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #ec4899, #8b5cf6)',
+                                color: 'white',
+                                fontSize: '0.92rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                boxShadow: '0 4px 15px rgba(236, 72, 153, 0.3)',
+                            }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.opacity = '0.9';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.opacity = '1';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                        >
+                            Thoát
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* Custom Toast Notification for Daily Quote */}
         {randomQuote && (
