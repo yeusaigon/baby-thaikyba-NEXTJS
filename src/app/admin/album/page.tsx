@@ -558,7 +558,7 @@ export default function AlbumPage() {
                         onClick={() => setActiveTab('video')} 
                         className={`tab-toggle ${activeTab === 'video' ? 'active' : ''}`}
                     >
-                        Video (YouTube)
+                        Video
                     </button>
                 </div>
             </div>
@@ -1001,6 +1001,15 @@ export default function AlbumPage() {
 
             {/* Styles */}
             <style jsx global>{`
+                @media (max-width: 600px) {
+                    .album-header {
+                        padding-top: 56px !important;
+                    }
+                    :global(.utility-page-container) {
+                        padding-top: 16px !important;
+                    }
+                }
+
                 .tab-toggle {
                     flex: 1;
                     padding: 10px 0;

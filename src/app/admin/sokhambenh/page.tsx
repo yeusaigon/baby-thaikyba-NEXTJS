@@ -292,7 +292,8 @@ export default function SoKhamBenh() {
             costTests: 0,
             costOther: 0,
             visitImages: formImages,
-            visitImage: null
+            visitImage: null,
+            nextDate: formNextDate
         };
 
         try {
@@ -473,28 +474,67 @@ export default function SoKhamBenh() {
     };
 
     return (
-        <div className="fade-in sokhambenh-container">
-            
+        <div className="fade-in sokhambenh-container utility-page-container">
+            {/* Stats Dashboard (Hero Banner) */}
+            <div className="stats-dashboard-p">
+                <div className="medical-header-p">
+                    <div>
+                        <div className="medical-brand-p">Sổ Tay Khám Điện Tử</div>
+                        <div className="patient-name-p">
+                            {profile.name || user?.displayName || 'Đang tải...'}
+                        </div>
+                        <div className="patient-sub-p">
+                            {profile.yob ? `NS: ${profile.yob}` : 'NS: --'} - PARA: {profile.para || '0000'}
+                        </div>
+                    </div>
+                    
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        {profile.avatar ? (
+                            <img src={profile.avatar} className="header-avatar-p" alt="Avatar" />
+                        ) : (
+                            <div className="header-avatar-p default">
+                                <IoPerson size={24} />
+                            </div>
+                        )}
+                        <div className="bhyt-badge-p">
+                            ID: {profile.bhyt ? profile.bhyt.substring(0, 10).toUpperCase() : user?.uid ? user.uid.substring(0, 8).toUpperCase() : '--'}
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="medical-stats-p">
+                    <div className="stat-box-p">
+                        <div className="stat-val-p">{activeVisits.length}</div>
+                        <div className="stat-lbl-p">Lần khám</div>
+                    </div>
+                    <div className="stat-box-p">
+                        <div className="stat-val-p checkup-blue">{nextVisitStr}</div>
+                        <div className="stat-lbl-p">Tái khám</div>
+                    </div>
+                    <div className="stat-box-p">
+                        <div className="stat-val-p cost-red">{totalCostStr}</div>
+                        <div className="stat-lbl-p">Tổng chi</div>
+                    </div>
+                </div>
+            </div>
+
             {/* Tabs */}
-            <div className="tab-switch" style={{ display: 'flex', background: 'rgba(148, 163, 184, 0.08)', borderRadius: '16px', padding: '6px', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.5)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+            <div className="tab-switch">
                 <button 
                     onClick={() => { setActiveTab('list'); setCurrentPage(1); }} 
                     className={`tab-btn ${activeTab === 'list' ? 'active' : ''}`}
-                    style={{ flex: 1, padding: '12px', border: 'none', background: activeTab === 'list' ? 'white' : 'transparent', borderRadius: '12px', fontWeight: 700, color: activeTab === 'list' ? 'var(--primary)' : '#64748b', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.88rem' }}
                 >
                     Lịch sử
                 </button>
                 <button 
                     onClick={() => { resetForm(); setActiveTab('add'); }} 
                     className={`tab-btn ${activeTab === 'add' ? 'active' : ''}`}
-                    style={{ flex: 1, padding: '12px', border: 'none', background: activeTab === 'add' ? 'white' : 'transparent', borderRadius: '12px', fontWeight: 700, color: activeTab === 'add' ? 'var(--primary)' : '#64748b', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.88rem' }}
                 >
-                    {editingId ? 'Cập nhật' : 'Thêm mới'}
+                    {editingId ? 'Cập nhật' : 'Ghi chép'}
                 </button>
                 <button 
                     onClick={() => setActiveTab('weight')} 
                     className={`tab-btn ${activeTab === 'weight' ? 'active' : ''}`}
-                    style={{ flex: 1, padding: '12px', border: 'none', background: activeTab === 'weight' ? 'white' : 'transparent', borderRadius: '12px', fontWeight: 700, color: activeTab === 'weight' ? 'var(--primary)' : '#64748b', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.88rem' }}
                 >
                     Tăng cân
                 </button>
@@ -506,49 +546,6 @@ export default function SoKhamBenh() {
                     {/* Left Column: Dashboard Summary on PC */}
                     <div className="medical-sidebar-p">
                         <div className="sidebar-sticky-p">
-                            {/* Stats Dashboard */}
-                            <div className="stats-dashboard-p">
-                                <div className="medical-header-p">
-                                    <div>
-                                        <div className="medical-brand-p">Sổ Tay Khám Điện Tử</div>
-                                        <div className="patient-name-p">
-                                            {profile.name || user?.displayName || 'Đang tải...'}
-                                        </div>
-                                        <div className="patient-sub-p">
-                                            {profile.yob ? `NS: ${profile.yob}` : 'NS: --'} - PARA: {profile.para || '0000'}
-                                        </div>
-                                    </div>
-                                    
-                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                        {profile.avatar ? (
-                                            <img src={profile.avatar} className="header-avatar-p" alt="Avatar" />
-                                        ) : (
-                                            <div className="header-avatar-p default">
-                                                <IoPerson size={24} />
-                                            </div>
-                                        )}
-                                        <div className="bhyt-badge-p">
-                                            ID: {profile.bhyt ? profile.bhyt.substring(0, 10).toUpperCase() : user?.uid ? user.uid.substring(0, 8).toUpperCase() : '--'}
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div className="medical-stats-p">
-                                    <div className="stat-box-p">
-                                        <div className="stat-val-p">{activeVisits.length}</div>
-                                        <div className="stat-lbl-p">Lần khám</div>
-                                    </div>
-                                    <div className="stat-box-p">
-                                        <div className="stat-val-p checkup-blue">{nextVisitStr}</div>
-                                        <div className="stat-lbl-p">Tái khám</div>
-                                    </div>
-                                    <div className="stat-box-p">
-                                        <div className="stat-val-p cost-red">{totalCostStr}</div>
-                                        <div className="stat-lbl-p">Tổng chi</div>
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* Quick Overview Card */}
                             {bmi !== null && (
                                 <div className="sidebar-overview-card-p">
@@ -1153,30 +1150,29 @@ export default function SoKhamBenh() {
                 /* Sổ Khám Bệnh - Glassmorphic Styles */
                 
                 .stats-dashboard-p {
-                    background: rgba(255, 255, 255, 0.7);
-                    backdrop-filter: blur(12px);
-                    -webkit-backdrop-filter: blur(12px);
-                    border: 1px solid rgba(255, 255, 255, 0.5);
+                    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
                     border-radius: 24px;
                     overflow: hidden;
-                    box-shadow: var(--shadow-soft);
+                    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.15);
                     margin-bottom: 24px;
+                    color: white;
+                    position: relative;
                 }
 
                 .medical-header-p {
-                    background: linear-gradient(135deg, rgba(248, 250, 252, 0.6) 0%, rgba(241, 245, 249, 0.6) 100%);
+                    background: transparent;
                     padding: 20px;
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-start;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
                 }
 
                 .medical-brand-p {
                     font-size: 0.75rem;
                     text-transform: uppercase;
                     font-weight: 800;
-                    color: var(--primary);
+                    color: rgba(255, 255, 255, 0.9);
                     letter-spacing: 0.5px;
                     margin-bottom: 4px;
                 }
@@ -1184,13 +1180,13 @@ export default function SoKhamBenh() {
                 .patient-name-p {
                     font-size: 1.25rem;
                     font-weight: 900;
-                    color: var(--text-main);
+                    color: white;
                     letter-spacing: -0.3px;
                 }
 
                 .patient-sub-p {
                     font-size: 0.8rem;
-                    color: var(--text-sub);
+                    color: rgba(255, 255, 255, 0.8);
                     margin-top: 4px;
                     font-weight: 500;
                 }
@@ -1205,22 +1201,22 @@ export default function SoKhamBenh() {
                 }
 
                 .header-avatar-p.default {
-                    background: rgba(148, 163, 184, 0.15);
+                    background: rgba(255, 255, 255, 0.2);
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    color: #94a3b8;
+                    color: white;
                 }
 
                 .bhyt-badge-p {
-                    background: rgba(255, 255, 255, 0.8);
-                    color: #64748b;
+                    background: rgba(255, 255, 255, 0.15);
+                    color: white;
                     padding: 3px 8px;
                     border-radius: 6px;
                     font-size: 0.68rem;
                     font-weight: 800;
                     margin-top: 6px;
-                    border: 1px solid rgba(226, 232, 240, 0.8);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     display: inline-block;
                 }
 
@@ -1228,7 +1224,7 @@ export default function SoKhamBenh() {
                     display: grid;
                     grid-template-columns: repeat(3, 1fr);
                     padding: 16px 0;
-                    background: transparent;
+                    background: rgba(255, 255, 255, 0.05);
                 }
 
                 .stat-box-p {
@@ -1243,30 +1239,79 @@ export default function SoKhamBenh() {
                     top: 15%;
                     height: 70%;
                     width: 1px;
-                    background: rgba(226, 232, 240, 0.8);
+                    background: rgba(255, 255, 255, 0.15);
                 }
 
                 .stat-val-p {
                     font-size: 1.15rem;
                     font-weight: 900;
-                    color: var(--text-main);
+                    color: white;
                 }
 
                 .stat-val-p.checkup-blue {
-                    color: #0284c7;
+                    color: #bae6fd;
                 }
 
                 .stat-val-p.cost-red {
-                    color: #ef4444;
+                    color: #fca5a5;
                 }
 
                 .stat-lbl-p {
                     font-size: 0.65rem;
-                    color: var(--text-sub);
+                    color: rgba(255, 255, 255, 0.8);
                     text-transform: uppercase;
                     font-weight: 800;
                     margin-top: 2px;
                     letter-spacing: 0.3px;
+                }
+
+                .tab-switch {
+                    display: flex;
+                    background: rgba(148, 163, 184, 0.08);
+                    border-radius: 16px;
+                    padding: 4px;
+                    margin-bottom: 24px;
+                    border: 1px solid rgba(255,255,255,0.5);
+                    backdrop-filter: blur(12px);
+                    -webkit-backdrop-filter: blur(12px);
+                }
+
+                .tab-btn {
+                    flex: 1;
+                    padding: 12px;
+                    border: none;
+                    background: transparent;
+                    border-radius: 12px;
+                    font-weight: 700;
+                    color: #64748b;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    font-size: 0.88rem;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .tab-btn.active {
+                    background: white;
+                    color: var(--primary);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                }
+
+                @media (max-width: 600px) {
+                    .tab-switch {
+                        margin-bottom: 20px;
+                    }
+                    .tab-btn {
+                        padding: 10px 4px;
+                        font-size: 0.84rem;
+                    }
+                    .stats-dashboard-p {
+                        padding-top: 56px !important;
+                    }
+                    :global(.sokhambenh-container) {
+                        padding-top: 16px !important;
+                    }
                 }
 
                 /* Layout Split */

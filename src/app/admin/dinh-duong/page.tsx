@@ -282,6 +282,14 @@ export default function NutritionPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const tabParam = params.get('tab');
+            if (tabParam === 'lookup' || tabParam === 'guide' || tabParam === 'diary') {
+                setActiveTab(tabParam);
+            }
+        }
+
         const currentUser = auth.currentUser;
         if (!currentUser) return;
         setUser(currentUser);
@@ -440,24 +448,41 @@ export default function NutritionPage() {
     return (
         <>
             <div className="utility-page-container fade-in">
+                <div className="dinhduong-hero-card">
+                    <div style={{ position: 'relative', zIndex: 2, marginRight: '40px' }}>
+                        <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.5px' }}>Dinh Dưỡng An Toàn</h2>
+                        <p style={{ opacity: 0.95, fontSize: '0.88rem', marginTop: '6px', fontWeight: 500, lineHeight: 1.45 }}>Tra cứu nhanh thực phẩm: Nên dùng, hạn chế hay cần tránh tuyệt đối trong thai kỳ.</p>
+                    </div>
+                    <div style={{ 
+                        position: 'absolute', 
+                        right: '-10px', 
+                        bottom: '-10px', 
+                        opacity: 0.18, 
+                        color: 'white', 
+                        transform: 'rotate(-15deg)',
+                        pointerEvents: 'none',
+                        zIndex: 1
+                    }}>
+                        <IoLeafOutline size={100} />
+                    </div>
+                </div>
+
                 <div className="segmented-control">
-                    <button onClick={() => setActiveTab('lookup')} className={`segment-btn ${activeTab === 'lookup' ? 'active' : ''}`}>Tra cứu thực phẩm</button>
-                    <button onClick={() => setActiveTab('guide')} className={`segment-btn ${activeTab === 'guide' ? 'active' : ''}`}>Thực đơn tuần thai</button>
-                    <button onClick={() => setActiveTab('diary')} className={`segment-btn ${activeTab === 'diary' ? 'active' : ''}`}>Nhật ký ăn uống</button>
+                    <button onClick={() => setActiveTab('lookup')} className={`segment-btn ${activeTab === 'lookup' ? 'active' : ''}`}>
+                        Tra cứu
+                    </button>
+                    <button onClick={() => setActiveTab('guide')} className={`segment-btn ${activeTab === 'guide' ? 'active' : ''}`}>
+                        Thực đơn
+                    </button>
+                    <button onClick={() => setActiveTab('diary')} className={`segment-btn ${activeTab === 'diary' ? 'active' : ''}`}>
+                        Nhật ký
+                    </button>
                 </div>
 
                 {activeTab === 'lookup' && (
                     <div id="view-lookup" className="fade-in">
-                        <div className="hero-card" style={{ padding: '20px', marginBottom: '20px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: '20px', color: 'white' }}>
-                            <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800 }}>Dinh Dưỡng An Toàn</h2>
-                            <p style={{ opacity: 0.9, fontSize: '0.9rem', marginTop: '5px', fontWeight: 500 }}>Tra cứu nhanh thực phẩm: Nên dùng, hạn chế hay cần tránh tuyệt đối trong thai kỳ.</p>
-                        </div>
                         <div className="search-box">
-                            <div style={{ position: 'relative' }}>
-                                <IoSearchOutline className="search-icon-abs" />
-                                <input type="text" value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)} className="search-inp" placeholder="Tìm món ăn (vd: rau ngót, nước dừa, tôm sống...)" />
-                            </div>
-                            <div className="filter-row">
+                            <div className="filter-row" style={{ marginTop: 0 }}>
                                 {[
                                     { id: 'rau', label: 'Rau củ' },
                                     { id: 'qua', label: 'Trái cây' },
@@ -710,6 +735,17 @@ export default function NutritionPage() {
             )}
 
             <style jsx global>{`
+                .dinhduong-hero-card {
+                    padding: 24px 20px;
+                    margin-bottom: 20px;
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    border-radius: 24px;
+                    color: white;
+                    position: relative;
+                    overflow: hidden;
+                    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12);
+                }
+
                 .segmented-control {
                     display: flex;
                     background: rgba(148, 163, 184, 0.08);
@@ -730,12 +766,48 @@ export default function NutritionPage() {
                     border-radius: 12px;
                     cursor: pointer;
                     transition: all 0.2s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
                 }
 
                 .segment-btn.active {
                     background: white;
                     color: var(--primary);
                     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                }
+
+                @media (max-width: 600px) {
+                    .segmented-control {
+                        display: flex;
+                        background: rgba(148, 163, 184, 0.08);
+                        padding: 4px;
+                        border-radius: 16px;
+                        margin-bottom: 20px;
+                        border: 1px solid rgba(255, 255, 255, 0.5);
+                    }
+                    .segment-btn {
+                        flex: 1;
+                        padding: 10px 4px;
+                        font-size: 0.84rem;
+                        background: transparent;
+                        border: none;
+                        border-radius: 12px;
+                        color: var(--text-sub);
+                    }
+                    .segment-btn.active {
+                        background: white;
+                        color: var(--primary);
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                        border-color: transparent;
+                    }
+                    .dinhduong-hero-card {
+                        padding-top: 56px !important;
+                    }
+                    :global(.utility-page-container) {
+                        padding-top: 16px !important;
+                    }
                 }
 
                 /* SEARCH & LOOKUP TAB */

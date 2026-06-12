@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { IoMenuOutline, IoNotificationsOutline, IoCloudOfflineOutline } from 'react-icons/io5';
 
 interface HeaderProps {
@@ -8,6 +9,8 @@ interface HeaderProps {
 
 export default function Header({ onOpenMenu }: HeaderProps) {
     const [isOffline, setIsOffline] = useState(false);
+    const [showHeader, setShowHeader] = useState(true);
+    const [lastScrollY, setLastScrollY] = useState(0);
 
     useEffect(() => {
         setIsOffline(!navigator.onLine);
@@ -23,6 +26,24 @@ export default function Header({ onOpenMenu }: HeaderProps) {
         };
     }, []);
 
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            
+            // Show header when scrolling up, hide when scrolling down (and past 60px)
+            if (currentScrollY > lastScrollY && currentScrollY > 60) {
+                setShowHeader(false);
+            } else {
+                setShowHeader(true);
+            }
+            
+            setLastScrollY(currentScrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [lastScrollY]);
+
     return (
         <div className="header" style={{
             display: 'flex',
@@ -34,7 +55,9 @@ export default function Header({ onOpenMenu }: HeaderProps) {
             position: 'sticky',
             top: 0,
             zIndex: 50,
-            boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
+            boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+            transform: showHeader ? 'translateY(0)' : 'translateY(-100%)',
+            transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         }}>
             <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <button 
@@ -50,16 +73,18 @@ export default function Header({ onOpenMenu }: HeaderProps) {
                 >
                     <IoMenuOutline size={26} />
                 </button>
-                <img 
-                    src="/logo.png" 
-                    width="36" 
-                    height="36"
-                    style={{ borderRadius: '10px', boxShadow: 'var(--shadow-soft)', objectFit: 'cover' }}
-                    alt="Logo"
-                />
-                <div className="brand" style={{ marginLeft: '4px', fontWeight: 900, fontSize: '1.25rem', color: '#0d9488' }}>
-                    ThaiKy<span style={{ color: '#f97316' }}>Pro</span>
-                </div>
+                <Link href="/admin" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+                    <img 
+                        src="/logo.png" 
+                        width="36" 
+                        height="36"
+                        style={{ borderRadius: '10px', boxShadow: 'var(--shadow-soft)', objectFit: 'cover' }}
+                        alt="Logo"
+                    />
+                    <div className="brand" style={{ marginLeft: '4px', fontWeight: 900, fontSize: '1.25rem', color: '#0d9488' }}>
+                        ThaiKy<span style={{ color: '#f97316' }}>Pro</span>
+                    </div>
+                </Link>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

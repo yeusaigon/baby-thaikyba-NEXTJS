@@ -196,22 +196,22 @@
         display: grid !important;
         grid-template-columns: 1fr 1fr;
         gap: 24px !important;
-        align-items: start !important;
+        align-items: stretch !important;
+    }
+
+    .db-left-col, .db-right-col {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
     }
 
     .db-hero {
         grid-column: span 2 !important;
     }
 
-    .db-nutrition {
-        margin-bottom: 0 !important;
-    }
-
-    .db-visits {
-        margin-bottom: 0 !important;
-    }
-
-    .db-utils {
+    .health-tracker-grid, .db-utils {
+        flex-grow: 1 !important;
+        margin-top: auto !important;
         margin-bottom: 0 !important;
     }
 
@@ -252,8 +252,7 @@
 }
 
 .utility-page-container {
-    padding: 20px;
-    padding-bottom: 100px;
+    padding: 68px 16px 100px 16px;
     max-width: 800px;
     margin: 0 auto;
 }

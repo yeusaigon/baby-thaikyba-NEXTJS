@@ -257,55 +257,59 @@ export default function ChecklistPage() {
 
     return (
         <div className="utility-page-container fade-in">
+            {/* Hero Banner Card */}
+            <div className="checklist-hero-card">
+                <IoBriefcaseOutline className="bg-floating-icon" style={{ position: 'absolute', right: '-15px', bottom: '-20px', fontSize: '9rem', opacity: 0.15, transform: 'rotate(-10deg)', pointerEvents: 'none' }} />
+                <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 900, letterSpacing: '-0.5px' }}>Chuẩn Bị Đi Sinh</h2>
+                <p style={{ margin: '6px 0 0 0', opacity: 0.9, fontSize: '0.95rem', fontWeight: 500, marginBottom: '14px' }}>
+                    Lên danh sách đầy đủ các vật dụng cần thiết cho mẹ và bé yêu trước ngày vượt cạn.
+                </p>
+                <div style={{ background: 'rgba(255, 255, 255, 0.15)', padding: '12px 16px', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 700 }}>
+                        <span>Tiến độ chuẩn bị: {percent}% ({checkedCount}/{totalCount} món)</span>
+                        <span>{getEncouragement(percent)}</span>
+                    </div>
+                    <div className="custom-progress-bg" style={{ background: 'rgba(255, 255, 255, 0.2)' }}>
+                        <div className="custom-progress-fill" style={{ width: `${percent}%`, background: 'white' }}></div>
+                    </div>
+                </div>
+            </div>
+
             {/* Tab switch controller */}
-            <div style={{ display: 'flex', background: 'rgba(148, 163, 184, 0.08)', borderRadius: '16px', padding: '4px', marginBottom: '24px', border: '1px solid rgba(255, 255, 255, 0.5)' }}>
+            <div className="tab-container-di-sinh">
                 <button 
                     onClick={() => setActiveTab('checklist')} 
                     className={`tab-toggle ${activeTab === 'checklist' ? 'active' : ''}`}
                 >
-                    Danh sách chuẩn bị
+                    Chuẩn bị
                 </button>
                 <button 
                     onClick={() => setActiveTab('guide')} 
                     className={`tab-toggle ${activeTab === 'guide' ? 'active' : ''}`}
                 >
-                    Kinh nghiệm & Mẹo
+                    Kinh nghiệm
                 </button>
             </div>
 
             {/* TAB CONTENT: CHECKLIST */}
             {activeTab === 'checklist' && (
-                <div className="checklist-layout">
-                    <div className="checklist-left-col">
-                        {/* Progress dashboard card */}
-                        <div className="progress-header-card">
-                            <IoBriefcaseOutline className="bg-floating-icon" />
-                            <div style={{ fontSize: '0.85rem', opacity: 0.9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tiến độ chuẩn bị giỏ đồ</div>
-                            <h2 style={{ fontSize: '1.9rem', fontWeight: 900, margin: '8px 0 6px 0' }}>{percent}% Hoàn thành</h2>
-                            <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '16px', opacity: 0.95 }}>{getEncouragement(percent)}</div>
-                            
-                            <div className="custom-progress-bg">
-                                <div className="custom-progress-fill" style={{ width: `${percent}%` }}></div>
-                            </div>
-                        </div>
-
-                        {/* Reset Button */}
+                <div className="checklist-container-inner">
+                    <div className="groups-grid">
+                        {renderChecklistGroup('giay-to', 'Giấy tờ quan trọng', '#3b82f6', <IoDocumentTextOutline style={{ fontSize: '1.25rem' }} />)}
+                        {renderChecklistGroup('cho-me', 'Đồ cho Mẹ', '#ec4899', <IoPersonAddOutline style={{ fontSize: '1.25rem' }} />)}
+                        {renderChecklistGroup('cho-be', 'Đồ cho Bé', '#f97316', <IoBodyOutline style={{ fontSize: '1.25rem' }} />)}
+                        {renderChecklistGroup('khac', 'Vật dụng khác', '#64748b', <IoLayersOutline style={{ fontSize: '1.25rem' }} />)}
+                    </div>
+                    
+                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
                         <button 
                             onClick={resetChecklist} 
                             disabled={isResetting} 
                             className="reset-db-btn"
+                            style={{ maxWidth: '320px' }}
                         >
-                            <IoReloadOutline className={isResetting ? "spin-icon" : ""} /> {isResetting ? "Đang đặt lại..." : "Khôi phục mặc định"}
+                            <IoReloadOutline className={isResetting ? "spin-icon" : ""} /> {isResetting ? "Đang đặt lại..." : "Khôi phục danh sách mặc định"}
                         </button>
-                    </div>
-
-                    <div className="checklist-right-col">
-                        <div className="groups-grid">
-                            {renderChecklistGroup('giay-to', 'Giấy tờ quan trọng', '#3b82f6', <IoDocumentTextOutline style={{ fontSize: '1.25rem' }} />)}
-                            {renderChecklistGroup('cho-me', 'Đồ cho Mẹ', '#ec4899', <IoPersonAddOutline style={{ fontSize: '1.25rem' }} />)}
-                            {renderChecklistGroup('cho-be', 'Đồ cho Bé', '#f97316', <IoBodyOutline style={{ fontSize: '1.25rem' }} />)}
-                            {renderChecklistGroup('khac', 'Vật dụng khác', '#64748b', <IoLayersOutline style={{ fontSize: '1.25rem' }} />)}
-                        </div>
                     </div>
                 </div>
             )}
@@ -763,16 +767,45 @@ export default function ChecklistPage() {
                     transform: translateY(0);
                 }
 
+                .checklist-hero-card {
+                    padding: 24px 20px;
+                    margin-bottom: 20px;
+                    background: linear-gradient(135deg, #0d9488 0%, #059669 100%);
+                    border-radius: 24px;
+                    color: white;
+                    position: relative;
+                    overflow: hidden;
+                    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12);
+                }
+
+                .tab-container-di-sinh {
+                    display: flex;
+                    background: rgba(148, 163, 184, 0.08);
+                    padding: 4px;
+                    border-radius: 16px;
+                    margin-bottom: 24px;
+                    border: 1px solid rgba(255, 255, 255, 0.5);
+                }
+
+                @media (max-width: 600px) {
+                    .tab-container-di-sinh {
+                        margin-bottom: 20px;
+                    }
+                    .tab-toggle {
+                        flex: 1;
+                        padding: 10px 4px !important;
+                        font-size: 0.84rem !important;
+                    }
+                    .checklist-hero-card {
+                        padding-top: 56px !important;
+                    }
+                    :global(.utility-page-container) {
+                        padding-top: 16px !important;
+                    }
+                }
+
                 /* PC MEDIA QUERIES (min-width: 992px) */
                 @media (min-width: 992px) {
-                    .checklist-layout {
-                        grid-template-columns: 340px 1fr;
-                        align-items: start;
-                    }
-                    .checklist-left-col {
-                        position: sticky;
-                        top: 24px;
-                    }
                     .groups-grid {
                         grid-template-columns: 1fr 1fr;
                     }

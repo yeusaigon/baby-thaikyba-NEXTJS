@@ -208,7 +208,7 @@ export default function LichKhamPage() {
     return (
         <div className="utility-page-container fade-in">
             {/* Header Banner */}
-            <div className="hero-card-s" style={{ padding: '24px', marginBottom: '24px', background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #f472b6 100%)', boxShadow: '0 12px 30px rgba(139, 92, 246, 0.25)', borderRadius: '24px', color: 'white', position: 'relative', overflow: 'hidden' }}>
+            <div className="hero-card-s">
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px', position: 'relative', zIndex: 2 }}>
                     <div style={{ background: 'rgba(255,255,255,0.2)', padding: '12px', borderRadius: '50%', color: 'white', display: 'flex' }}>
                         <IoCalendarOutline size={30} />
@@ -239,18 +239,16 @@ export default function LichKhamPage() {
             </div>
 
             {/* Segment Controls */}
-            <div className="segmented-control" style={{ display: 'flex', background: 'rgba(148, 163, 184, 0.08)', padding: '4px', borderRadius: '16px', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.5)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+            <div className="segmented-control">
                 <button 
                     onClick={() => setActiveTab('checkup')} 
                     className={`segment-btn ${activeTab === 'checkup' ? 'active' : ''}`}
-                    style={{ flex: 1, padding: '12px', border: 'none', background: activeTab === 'checkup' ? 'white' : 'transparent', borderRadius: '12px', fontWeight: 700, color: activeTab === 'checkup' ? '#8b5cf6' : 'var(--text-sub)', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.88rem' }}
                 >
-                    Lịch khám thai
+                    Lịch khám
                 </button>
                 <button 
                     onClick={() => setActiveTab('fetal')} 
                     className={`segment-btn ${activeTab === 'fetal' ? 'active' : ''}`}
-                    style={{ flex: 1, padding: '12px', border: 'none', background: activeTab === 'fetal' ? 'white' : 'transparent', borderRadius: '12px', fontWeight: 700, color: activeTab === 'fetal' ? '#8b5cf6' : 'var(--text-sub)', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.88rem' }}
                 >
                     Bé phát triển
                 </button>
@@ -447,6 +445,63 @@ export default function LichKhamPage() {
             </div>
 
             <style jsx global>{`
+                .hero-card-s {
+                    padding: 24px;
+                    margin-bottom: 24px;
+                    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #f472b6 100%);
+                    box-shadow: 0 12px 30px rgba(139, 92, 246, 0.25);
+                    border-radius: 24px;
+                    color: white;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .segmented-control {
+                    display: flex;
+                    background: rgba(148, 163, 184, 0.08);
+                    padding: 4px;
+                    border-radius: 16px;
+                    margin-bottom: 24px;
+                    border: 1px solid rgba(255, 255, 255, 0.5);
+                    backdrop-filter: blur(12px);
+                    -webkit-backdrop-filter: blur(12px);
+                }
+
+                .segment-btn {
+                    flex: 1;
+                    padding: 12px;
+                    border: none;
+                    background: transparent;
+                    border-radius: 12px;
+                    font-weight: 700;
+                    color: var(--text-sub);
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    font-size: 0.88rem;
+                }
+
+                .segment-btn.active {
+                    background: white;
+                    color: #8b5cf6;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                }
+
+                @media (max-width: 600px) {
+                    .hero-card-s {
+                        padding-top: 56px !important;
+                    }
+                    :global(.utility-page-container) {
+                        padding-top: 16px !important;
+                    }
+                    .segmented-control {
+                        margin-bottom: 20px;
+                    }
+                    .segment-btn {
+                        padding: 10px 4px;
+                        font-size: 0.84rem;
+                    }
+                }
+
                 @keyframes pulse-ring {
                     0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.5); }
                     70% { transform: scale(1.4); box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }

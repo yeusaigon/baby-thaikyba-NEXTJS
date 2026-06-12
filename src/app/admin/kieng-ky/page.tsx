@@ -236,7 +236,7 @@ export default function PrecautionsPage() {
                         onClick={() => setActiveTab('folk')} 
                         className={`tab-toggle ${activeTab === 'folk' ? 'active' : ''}`}
                     >
-                        Tâm linh & Dân gian
+                        Dân gian
                     </button>
                     <button 
                         onClick={() => setActiveTab('food')} 
@@ -549,6 +549,22 @@ export default function PrecautionsPage() {
                     white-space: nowrap;
                     text-transform: uppercase;
                     letter-spacing: 0.3px;
+                }
+
+                @media (max-width: 600px) {
+                    .hero-card-p {
+                        padding-top: 56px !important;
+                    }
+                    :global(.utility-page-container) {
+                        padding-top: 16px !important;
+                    }
+                    .tab-scroll-container {
+                        margin-bottom: 20px;
+                    }
+                    .tab-toggle {
+                        padding: 10px 4px;
+                        font-size: 0.84rem;
+                    }
                 }
 
                 /* PC MEDIA QUERIES (min-width: 992px) */

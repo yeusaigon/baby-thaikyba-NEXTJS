@@ -376,6 +376,22 @@ export default function FetalEducationPage() {
                     box-shadow: 0 4px 20px rgba(124, 58, 237, 0.12);
                 }
                 
+                @media (max-width: 600px) {
+                    .intro-card-tg {
+                        padding-top: 56px !important;
+                    }
+                    :global(.utility-page-container) {
+                        padding-top: 16px !important;
+                    }
+                    .tab-container-tg {
+                        margin-bottom: 20px !important;
+                    }
+                    .tab-toggle {
+                        padding: 10px 4px !important;
+                        font-size: 0.84rem !important;
+                    }
+                }
+                
                 /* Layout Split */
                 .tg-split-layout-p {
                     display: flex;

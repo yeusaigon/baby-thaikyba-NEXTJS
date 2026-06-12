@@ -389,6 +389,15 @@ export default function HandbookPage() {
                     flex-direction: column;
                     gap: 20px;
                 }
+                @media (max-width: 600px) {
+                    :global(.utility-page-container) {
+                        padding-top: 16px !important;
+                    }
+                    .handbook-header {
+                        padding-top: 56px !important;
+                    }
+                }
+
                 @media (min-width: 992px) {
                     .handbook-layout {
                         display: grid;

@@ -57,17 +57,30 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
-        const currentUser = auth.currentUser;
-        if (!currentUser) return;
-        setUser(currentUser);
+        let unsubscribeProfile: (() => void) | null = null;
 
-        const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid, "settings", "profile"), (d) => {
-            if (d.exists()) {
-                setProfile(d.data());
+        const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                unsubscribeProfile = onSnapshot(doc(db, "users", currentUser.uid, "settings", "profile"), (d) => {
+                    if (d.exists()) {
+                        setProfile(d.data());
+                    }
+                });
+            } else {
+                setUser(null);
+                setProfile({});
+                if (unsubscribeProfile) {
+                    unsubscribeProfile();
+                    unsubscribeProfile = null;
+                }
             }
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribeAuth();
+            if (unsubscribeProfile) unsubscribeProfile();
+        };
     }, []);
 
     const menuConfig = profile.menuConfig || DEFAULT_MENU_IDS;
@@ -112,56 +125,69 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     display: 'flex', flexDirection: 'column'
                 }}
             >
-                {/* Close Button for ease of use */}
-                <button 
-                    className="side-menu-close-btn"
-                    onClick={onClose}
-                    style={{
-                        position: 'absolute', top: '15px', right: '15px',
-                        background: 'rgba(255,255,255,0.8)', border: 'none', 
-                        borderRadius: '50%', padding: '6px', cursor: 'pointer', zIndex: 10,
-                        display: 'flex', alignItems: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                    }}
-                >
-                    <IoCloseOutline size={20} color="#475569" />
-                </button>
 
-                {/* Header (Mẹ Bầu Profile) */}
+
+                {/* Header (Logo & Brand only) */}
                 <div className="menu-header" style={{
-                    padding: '30px 20px', 
+                    padding: '30px 20px 20px 20px', 
                     background: 'linear-gradient(135deg, #fdf4ff 0%, #f0fdfa 100%)', 
                     borderTopRightRadius: '24px', position: 'relative', overflow: 'hidden'
                 }}>
+                    {/* Close button inside sidebar */}
+                    <button
+                        onClick={onClose}
+                        className="side-menu-close-btn"
+                        style={{
+                            position: 'absolute',
+                            top: '16px',
+                            right: '16px',
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: 'rgba(255, 255, 255, 0.85)',
+                            backdropFilter: 'blur(8px)',
+                            WebkitBackdropFilter: 'blur(8px)',
+                            border: '1px solid rgba(13, 148, 136, 0.2)',
+                            boxShadow: '0 4px 12px rgba(13, 148, 136, 0.08)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#0d9488',
+                            cursor: 'pointer',
+                            zIndex: 10,
+                            transition: 'all 0.25s ease'
+                        }}
+                        onMouseOver={(e) => {
+                            e.currentTarget.style.background = '#0d9488';
+                            e.currentTarget.style.color = 'white';
+                            e.currentTarget.style.borderColor = '#0d9488';
+                        }}
+                        onMouseOut={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.85)';
+                            e.currentTarget.style.color = '#0d9488';
+                            e.currentTarget.style.borderColor = 'rgba(13, 148, 136, 0.2)';
+                        }}
+                    >
+                        <IoCloseOutline size={20} />
+                    </button>
+
                     <IoFlowerOutline style={{
                         position: 'absolute', top: '-20px', right: '-20px', 
                         fontSize: '150px', color: '#fbcfe8', opacity: 0.3, pointerEvents: 'none'
                     }} />
                     
-                    <div className="user-avatar-large" style={{
-                        background: 'white', border: '3px solid white', 
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.05)', position: 'relative', 
-                        zIndex: 2, width: '60px', height: '60px', borderRadius: '50%',
-                        overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                        {profile.avatar ? (
-                            <img src={profile.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" />
-                        ) : (
-                            <IoPersonOutline size={30} color="#ec4899" />
-                        )}
-                    </div>
-                    
-                    <div className="menu-user-name" style={{
-                        color: '#334155', position: 'relative', zIndex: 2,
-                        fontWeight: 800, marginTop: '12px', fontSize: '1.1rem'
-                    }}>
-                        {profile.name || user?.displayName || 'Mẹ bầu xinh đẹp'}
-                    </div>
-                    
-                    <div className="menu-user-sub" style={{
-                        color: '#64748b', fontWeight: 500, position: 'relative', 
-                        zIndex: 2, fontSize: '0.8rem', marginTop: '2px'
-                    }}>
-                        {user?.email || ''}
+                    {/* Logo & Brand */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 2 }}>
+                        <img 
+                            src="/logo.png" 
+                            width="44" 
+                            height="44"
+                            style={{ borderRadius: '12px', boxShadow: 'var(--shadow-soft)', objectFit: 'cover' }}
+                            alt="Logo"
+                        />
+                        <div style={{ fontWeight: 900, fontSize: '1.35rem', color: '#0d9488' }}>
+                            ThaiKy<span style={{ color: '#f97316' }}>Pro</span>
+                        </div>
                     </div>
                 </div>
 
@@ -228,21 +254,50 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </Link>
                 </div>
 
-                {/* Footer (Sign out) */}
-                <div className="menu-footer" style={{ padding: '20px 15px', borderTop: '1px solid #f1f5f9' }}>
+                {/* Footer (User session & Logout) */}
+                <div className="menu-footer" style={{ 
+                    padding: '20px', 
+                    borderTop: '1px solid #f1f5f9', 
+                    background: '#fafafa',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                }}>
+                    {/* Logout Button */}
                     <button 
                         onClick={handleLogout} 
-                        className="menu-item-link" 
                         style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', 
-                            padding: '12px', width: '100%', background: '#fff1f2', color: '#e11d48', 
-                            border: 'none', fontWeight: 700, borderRadius: '14px', cursor: 'pointer',
-                            boxShadow: '0 4px 6px rgba(225,29,72,0.1)', transition: 'all 0.2s'
+                            width: '100%',
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            gap: '8px',
+                            padding: '10px', 
+                            background: '#fff1f2', 
+                            color: '#e11d48',
+                            border: 'none', 
+                            fontWeight: 700, 
+                            borderRadius: '12px', 
+                            cursor: 'pointer',
+                            fontSize: '0.85rem', 
+                            boxShadow: '0 2px 6px rgba(225,29,72,0.06)',
+                            transition: 'all 0.2s'
                         }}
+                        onMouseOver={(e) => e.currentTarget.style.background = '#ffe4e6'}
+                        onMouseOut={(e) => e.currentTarget.style.background = '#fff1f2'}
                     >
-                        <IoLogOutOutline size={20} />
-                        Đăng xuất
+                        <IoLogOutOutline size={16} /> Đăng xuất
                     </button>
+                    
+                    {/* Email & Copyright info */}
+                    <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, wordBreak: 'break-all' }}>
+                            {user?.email || ''}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 500, marginTop: '2px' }}>
+                            © {new Date().getFullYear()} Phan Minh Trí • All Rights Reserved
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

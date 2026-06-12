@@ -19,6 +19,10 @@ export default function SettingsPage() {
     const [profile, setProfile] = useState<any>({});
     const [activeSection, setActiveSection] = useState<'profile' | 'vis' | 'data' | null>('profile');
     
+    // Menu configuration local states
+    const [menuConfig, setMenuConfig] = useState<string[]>([]);
+    const [isSavingMenu, setIsSavingMenu] = useState(false);
+    
     // Status states
     const [isSaving, setIsSaving] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
@@ -39,32 +43,50 @@ export default function SettingsPage() {
     const [avatar, setAvatar] = useState('');
 
     useEffect(() => {
-        const currentUser = auth.currentUser;
-        if (!currentUser) return;
-        setUser(currentUser);
+        let unsubscribeProfile: (() => void) | null = null;
 
-        // Fetch settings profile
-        const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid, "settings", "profile"), (d) => {
-            if (d.exists()) {
-                const data = d.data();
-                setProfile(data);
+        const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
                 
-                // Set default inputs from Firestore
-                setName(data.name || '');
-                setYob(data.yob || '');
-                setBloodType(data.bloodType || '');
-                setPara(data.para || '');
-                setBhyt(data.bhyt || '');
-                setAllergy(data.allergy || '');
-                setLmp(data.lmp || '');
-                setPhoneWife(data.phoneWife || '');
-                setPhoneHusband(data.phoneHusband || '');
-                setAddress(data.address || '');
-                setAvatar(data.avatar || '');
+                // Fetch settings profile
+                unsubscribeProfile = onSnapshot(doc(db, "users", currentUser.uid, "settings", "profile"), (d) => {
+                    if (d.exists()) {
+                        const data = d.data();
+                        setProfile(data);
+                        setMenuConfig(data.menuConfig || DEFAULT_MENU_IDS);
+                        
+                        // Set default inputs from Firestore
+                        setName(data.name || '');
+                        setYob(data.yob || '');
+                        setBloodType(data.bloodType || '');
+                        setPara(data.para || '');
+                        setBhyt(data.bhyt || '');
+                        setAllergy(data.allergy || '');
+                        setLmp(data.lmp || '');
+                        setPhoneWife(data.phoneWife || '');
+                        setPhoneHusband(data.phoneHusband || '');
+                        setAddress(data.address || '');
+                        setAvatar(data.avatar || '');
+                    } else {
+                        setMenuConfig(DEFAULT_MENU_IDS);
+                    }
+                });
+            } else {
+                setUser(null);
+                setProfile({});
+                setMenuConfig(DEFAULT_MENU_IDS);
+                if (unsubscribeProfile) {
+                    unsubscribeProfile();
+                    unsubscribeProfile = null;
+                }
             }
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribeAuth();
+            if (unsubscribeProfile) unsubscribeProfile();
+        };
     }, []);
 
     const toggleSection = (sec: 'profile' | 'vis' | 'data') => {
@@ -177,24 +199,29 @@ export default function SettingsPage() {
         }
     };
 
-    // Toggle menu config visibility items
-    const handleMenuSelection = async (itemId: string) => {
-        if (!user) return;
-        const currentConfig = profile.menuConfig || DEFAULT_MENU_IDS;
-        let newConfig = [];
-        if (currentConfig.includes(itemId)) {
-            newConfig = currentConfig.filter((id: string) => id !== itemId);
-        } else {
-            newConfig = [...currentConfig, itemId];
-        }
+    // Toggle menu config visibility items locally
+    const handleMenuSelection = (itemId: string) => {
+        setMenuConfig(prev => {
+            if (prev.includes(itemId)) {
+                return prev.filter(id => id !== itemId);
+            } else {
+                return [...prev, itemId];
+            }
+        });
+    };
 
+    const handleSaveMenuConfig = async () => {
+        if (!user) return;
+        setIsSavingMenu(true);
         try {
             await setDoc(doc(db, "users", user.uid, "settings", "profile"), {
-                ...profile,
-                menuConfig: newConfig
+                menuConfig: menuConfig
             }, { merge: true });
+            alert("Đã lưu cấu hình tiện ích thành công!");
         } catch (err: any) {
-            console.error("Lỗi cập nhật menu:", err);
+            alert("Lỗi khi lưu: " + err.message);
+        } finally {
+            setIsSavingMenu(false);
         }
     };
 
@@ -377,14 +404,55 @@ export default function SettingsPage() {
     };
 
     const selectableItems = MENU_DEFS.filter(i => i.id !== 'home' && i.id !== 'settings');
-    const currentConfig = profile.menuConfig || DEFAULT_MENU_IDS;
 
     return (
         <div className="utility-page-container fade-in">
             <style jsx>{`
+                @media (max-width: 600px) {
+                    .settings-header-banner {
+                        padding-top: 56px !important;
+                    }
+                    :global(.utility-page-container) {
+                        padding-top: 16px !important;
+                    }
+                }
+
                 @keyframes spin {
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(360deg); }
+                }
+
+                .spin-icon {
+                    animation: spin 1s linear infinite;
+                }
+
+                .btn-save-circle {
+                    width: 56px;
+                    height: 56px;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                    color: white;
+                    border: none;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+                    cursor: pointer;
+                    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                    margin: 0 auto;
+                }
+                .btn-save-circle:hover {
+                    transform: scale(1.08) translateY(-2px);
+                    box-shadow: 0 12px 24px rgba(124, 58, 237, 0.45);
+                }
+                .btn-save-circle:active {
+                    transform: scale(0.95) translateY(0);
+                }
+                .btn-save-circle:disabled {
+                    background: #cbd5e1;
+                    color: #94a3b8;
+                    box-shadow: none;
+                    cursor: not-allowed;
                 }
 
                 /* Banner Tiêu Đề Cao Cấp */
@@ -954,7 +1022,7 @@ export default function SettingsPage() {
                         
                         <div className="menu-config-grid">
                             {selectableItems.map(item => {
-                                const isChecked = currentConfig.includes(item.id);
+                                const isChecked = menuConfig.includes(item.id);
                                 return (
                                     <div 
                                         key={item.id}
@@ -982,6 +1050,17 @@ export default function SettingsPage() {
                                     </div>
                                 );
                             })}
+                        </div>
+
+                        <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
+                            <button 
+                                onClick={handleSaveMenuConfig}
+                                disabled={isSavingMenu}
+                                className="btn-save-circle"
+                                title="Lưu cấu hình tiện ích"
+                            >
+                                <IoSaveOutline size={22} className={isSavingMenu ? "spin-icon" : ""} />
+                            </button>
                         </div>
                     </div>
                 )}
