@@ -449,3 +449,47 @@ input:checked + .slider:before { transform: translateX(20px); }
     display: inline-block;
     vertical-align: middle;
 }
+
+/* Custom Sidebar Menu Item Lively Hover Styles */
+.menu-item-link {
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hover effect: shift to right, add soft background, and scale up slightly */
+.menu-item-link:hover {
+    transform: translate3d(6px, 0, 0);
+    background-color: #f0fdfa !important;
+    color: var(--primary) !important;
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.05);
+}
+
+/* Make the icon inside menu link bounce/rotate slightly on hover */
+.menu-item-link svg {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.menu-item-link:hover svg {
+    transform: scale(1.15) rotate(-5deg);
+    color: var(--primary) !important;
+}
+
+/* Add a sleek left accent border that slides in on hover */
+.menu-item-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) scaleY(0);
+    width: 4px;
+    height: 60%;
+    background-color: var(--primary);
+    border-radius: 0 4px 4px 0;
+    transition: transform 0.25s ease;
+    transform-origin: center;
+}
+
+.menu-item-link:hover::before,
+.menu-item-link.active::before {
+    transform: translateY(-50%) scaleY(1);
+}

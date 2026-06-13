@@ -177,7 +177,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     }} />
                     
                     {/* Logo & Brand */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 2 }}>
+                    <Link 
+                        href="/admin" 
+                        onClick={onClose}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 2, textDecoration: 'none' }}
+                    >
                         <img 
                             src="/logo.png" 
                             width="44" 
@@ -188,30 +192,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         <div style={{ fontWeight: 900, fontSize: '1.35rem', color: '#0d9488' }}>
                             ThaiKy<span style={{ color: '#f97316' }}>Pro</span>
                         </div>
-                    </div>
+                    </Link>
                 </div>
 
                 {/* Menu list */}
                 <div id="drawer-list" className="menu-list" style={{
                     flex: 1, overflowY: 'auto', padding: '15px 10px'
                 }}>
-                    {/* Fixed Home link */}
-                    <Link 
-                        href="/admin" 
-                        onClick={onClose} 
-                        className={`menu-item-link ${pathname === '/admin' ? 'active' : ''}`} 
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-                            borderRadius: '12px', textDecoration: 'none', color: pathname === '/admin' ? 'var(--primary)' : '#64748b',
-                            fontWeight: pathname === '/admin' ? 800 : 600, background: pathname === '/admin' ? '#f0fdfa' : 'transparent',
-                            marginBottom: '5px'
-                        }}
-                    >
-                        <IoHomeOutline size={22} color={pathname === '/admin' ? 'var(--primary)' : '#64748b'} />
-                        Trang chủ
-                    </Link>
-
-                    <div style={{ height: '1px', background: '#f1f5f9', margin: '10px 0' }} />
 
                     {/* Dynamic configured pages */}
                     {dynamicItems.map(item => {
