@@ -11,7 +11,8 @@ import {
     IoRestaurantOutline, IoMedicalOutline, IoHeartOutline,
     IoSettingsOutline, IoClipboardOutline, IoCalendarOutline,
     IoImagesOutline, IoBriefcaseOutline, IoBookOutline,
-    IoShieldHalfOutline, IoMusicalNotesOutline, IoAppsOutline
+    IoShieldHalfOutline, IoMusicalNotesOutline, IoAppsOutline,
+    IoPulseOutline, IoFootstepsOutline, IoWarningOutline
 } from 'react-icons/io5';
 import './splash.css';
 
@@ -25,94 +26,115 @@ const ROUTE_CONFIGS: Record<string, { title: string; background: string; textCol
     },
     '/admin/settings': {
         title: 'Cài đặt hệ thống',
-        background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 48%, #fdf2f8 100%)',
+        textColor: '#475569',
+        btnColor: '#475569',
         icon: <IoSettingsOutline size={18} />
     },
     '/admin/ung-dung': {
         title: 'Tất cả ứng dụng',
-        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #f5f3ff 0%, #eff6ff 48%, #fff7fb 100%)',
+        textColor: '#6d28d9',
+        btnColor: '#6d28d9',
         icon: <IoAppsOutline size={18} />
     },
     '/admin/sokhambenh': {
         title: 'Sổ khám bệnh',
-        background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #f0fdfa 0%, #ffffff 48%, #ecfdf5 100%)',
+        textColor: '#0f766e',
+        btnColor: '#0f766e',
         icon: <IoClipboardOutline size={18} />
     },
     '/admin/lich-kham': {
         title: 'Lịch khám thai',
-        background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #f472b6 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #f5f3ff 0%, #eff6ff 48%, #fdf2f8 100%)',
+        textColor: '#7c3aed',
+        btnColor: '#7c3aed',
         icon: <IoCalendarOutline size={18} />
     },
     '/admin/dinh-duong': {
         title: 'Dinh dưỡng thai kỳ',
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #ecfdf5 0%, #ffffff 48%, #fff7ed 100%)',
+        textColor: '#047857',
+        btnColor: '#047857',
         icon: <IoRestaurantOutline size={18} />
+    },
+    '/admin/suc-khoe': {
+        title: 'Theo dõi sức khỏe',
+        background: 'linear-gradient(135deg, #ecfeff 0%, #ffffff 48%, #f0fdfa 100%)',
+        textColor: '#0891b2',
+        btnColor: '#0891b2',
+        icon: <IoPulseOutline size={18} />
     },
     '/admin/album': {
         title: 'Album ảnh của bé',
-        background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #f5f3ff 0%, #ffffff 48%, #fdf2f8 100%)',
+        textColor: '#7c3aed',
+        btnColor: '#7c3aed',
         icon: <IoImagesOutline size={18} />
     },
     '/admin/chuan-bi-di-sinh': {
         title: 'Giỏ đồ đi sinh',
-        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #fffbeb 0%, #ffffff 48%, #fff7ed 100%)',
+        textColor: '#b45309',
+        btnColor: '#b45309',
         icon: <IoBriefcaseOutline size={18} />
     },
     '/admin/tiem-chung': {
         title: 'Sổ tiêm chủng',
-        background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #ecfdf5 0%, #ffffff 48%, #f0fdfa 100%)',
+        textColor: '#047857',
+        btnColor: '#047857',
         icon: <IoMedicalOutline size={18} />
     },
     '/admin/nhat-ky-be': {
         title: 'Nhật ký của bé',
-        background: 'linear-gradient(135deg, #db2777 0%, #ec4899 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #fdf2f8 0%, #ffffff 48%, #fff1f2 100%)',
+        textColor: '#be185d',
+        btnColor: '#be185d',
         icon: <IoHeartOutline size={18} />
     },
     '/admin/tai-chinh': {
         title: 'Sổ chi tiêu sắm đồ',
-        background: 'linear-gradient(135deg, #ea580c 0%, #ca8a04 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #fff7ed 0%, #ffffff 48%, #fffbeb 100%)',
+        textColor: '#c2410c',
+        btnColor: '#c2410c',
         icon: <IoWalletOutline size={18} />
+    },
+    '/admin/cu-dong-thai': {
+        title: 'Cử động thai',
+        background: 'linear-gradient(135deg, #fdf2f8 0%, #ffffff 48%, #fff7fb 100%)',
+        textColor: '#be185d',
+        btnColor: '#be185d',
+        icon: <IoFootstepsOutline size={18} />
     },
     '/admin/note': {
         title: 'Cẩm nang thai kỳ',
-        background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #f0fdfa 0%, #ffffff 48%, #ecfeff 100%)',
+        textColor: '#0f766e',
+        btnColor: '#0f766e',
         icon: <IoBookOutline size={18} />
     },
     '/admin/thai-giao': {
         title: 'Thai giáo cho bé',
-        background: 'linear-gradient(135deg, #db2777 0%, #b91c1c 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #fdf2f8 0%, #ffffff 48%, #f5f3ff 100%)',
+        textColor: '#be185d',
+        btnColor: '#be185d',
         icon: <IoMusicalNotesOutline size={18} />
     },
     '/admin/kieng-ky': {
         title: 'Kiêng kỵ thai kỳ',
-        background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-        textColor: '#ffffff',
-        btnColor: '#ffffff',
+        background: 'linear-gradient(135deg, #fff1f2 0%, #ffffff 48%, #fef2f2 100%)',
+        textColor: '#b91c1c',
+        btnColor: '#b91c1c',
         icon: <IoShieldHalfOutline size={18} />
+    },
+    '/admin/canh-bao': {
+        title: 'Cảnh báo đỏ',
+        background: 'linear-gradient(135deg, #fff1f2 0%, #ffffff 48%, #fdf2f8 100%)',
+        textColor: '#be123c',
+        btnColor: '#be123c',
+        icon: <IoWarningOutline size={18} />
     }
 };
 

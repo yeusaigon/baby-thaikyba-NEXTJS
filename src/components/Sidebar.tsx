@@ -121,7 +121,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={`menu-overlay ${isOpen ? 'open' : ''}`} 
                 onClick={onClose}
                 style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+                    position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.24)',
+                    backdropFilter: 'blur(3px)',
+                    WebkitBackdropFilter: 'blur(3px)',
                     zIndex: 99, opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'all' : 'none',
                     transition: 'opacity 0.3s ease'
                 }}
@@ -133,7 +135,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={`side-menu ${isOpen ? 'open' : ''}`}
                 style={{
                     position: 'fixed', top: 0, left: 0, bottom: 0, width: '280px',
-                    background: 'white', zIndex: 100, boxShadow: '10px 0 30px rgba(0,0,0,0.05)',
+                    background: 'linear-gradient(180deg, #fff7fb 0%, #ffffff 44%, #f0fdfa 100%)',
+                    zIndex: 100,
+                    boxShadow: '14px 0 42px rgba(236, 72, 153, 0.12)',
                     transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
                     transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     display: 'flex', flexDirection: 'column'
@@ -144,8 +148,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 {/* Header (Logo & Brand only) */}
                 <div className="menu-header" style={{
                     padding: '30px 20px 20px 20px', 
-                    background: 'linear-gradient(135deg, #fdf4ff 0%, #f0fdfa 100%)', 
-                    borderTopRightRadius: '24px', position: 'relative', overflow: 'hidden'
+                    background: 'linear-gradient(135deg, #fff1f7 0%, #ffffff 46%, #e9fbf7 100%)', 
+                    borderTopRightRadius: '24px',
+                    borderBottom: '1px solid rgba(251, 207, 232, 0.7)',
+                    position: 'relative',
+                    overflow: 'hidden'
                 }}>
                     {/* Close button inside sidebar */}
                     <button
@@ -187,7 +194,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                     <IoFlowerOutline style={{
                         position: 'absolute', top: '-20px', right: '-20px', 
-                        fontSize: '150px', color: '#fbcfe8', opacity: 0.3, pointerEvents: 'none'
+                        fontSize: '150px', color: '#f9a8d4', opacity: 0.18, pointerEvents: 'none'
                     }} />
                     
                     {/* Logo & Brand */}
@@ -212,7 +219,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                 {/* Menu list */}
                 <div id="drawer-list" className="menu-list" style={{
-                    flex: 1, overflowY: 'auto', padding: '15px 10px'
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '15px 10px',
+                    background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.64) 0%, rgba(240, 253, 250, 0.38) 100%)'
                 }}>
 
                     {/* Dynamic configured pages */}
@@ -227,18 +237,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                 className={`menu-item-link ${isActive ? 'active' : ''}`} 
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-                                    borderRadius: '12px', textDecoration: 'none', color: isActive ? 'var(--primary)' : '#64748b',
-                                    fontWeight: isActive ? 800 : 600, background: isActive ? '#f0fdfa' : 'transparent',
-                                    marginBottom: '5px'
+                                    borderRadius: '14px', textDecoration: 'none', color: isActive ? '#0f766e' : '#64748b',
+                                    fontWeight: isActive ? 800 : 600,
+                                    background: isActive ? 'linear-gradient(135deg, rgba(255, 241, 242, 0.9) 0%, rgba(240, 253, 250, 0.95) 100%)' : 'transparent',
+                                    border: isActive ? '1px solid rgba(251, 207, 232, 0.72)' : '1px solid transparent',
+                                    boxShadow: isActive ? '0 8px 18px rgba(13, 148, 136, 0.08)' : 'none',
+                                    marginBottom: '5px',
+                                    transition: 'background 0.2s ease, color 0.2s ease, transform 0.2s ease'
                                 }}
                             >
-                                {getMenuIcon(item.icon, isActive ? 'var(--primary)' : '#64748b')}
+                                {getMenuIcon(item.icon, isActive ? item.color : '#64748b')}
                                 {item.label}
                             </Link>
                         );
                     })}
 
-                    <div style={{ height: '1px', background: '#f1f5f9', margin: '10px 0' }} />
+                    <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(251, 207, 232, 0.75), transparent)', margin: '10px 0' }} />
 
                     {/* All Apps Link */}
                     <Link 
@@ -248,12 +262,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         className={`menu-item-link ${pathname === '/admin/ung-dung' ? 'active' : ''}`} 
                         style={{
                             display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-                            borderRadius: '12px', textDecoration: 'none', color: pathname === '/admin/ung-dung' ? 'var(--primary)' : '#64748b',
-                            fontWeight: pathname === '/admin/ung-dung' ? 800 : 600, background: pathname === '/admin/ung-dung' ? '#f0fdfa' : 'transparent',
+                            borderRadius: '14px', textDecoration: 'none', color: pathname === '/admin/ung-dung' ? '#0f766e' : '#64748b',
+                            fontWeight: pathname === '/admin/ung-dung' ? 800 : 600,
+                            background: pathname === '/admin/ung-dung' ? 'linear-gradient(135deg, rgba(255, 241, 242, 0.9) 0%, rgba(240, 253, 250, 0.95) 100%)' : 'transparent',
+                            border: pathname === '/admin/ung-dung' ? '1px solid rgba(251, 207, 232, 0.72)' : '1px solid transparent',
+                            boxShadow: pathname === '/admin/ung-dung' ? '0 8px 18px rgba(13, 148, 136, 0.08)' : 'none',
                             marginBottom: '5px'
                         }}
                     >
-                        <IoAppsOutline size={22} color={pathname === '/admin/ung-dung' ? 'var(--primary)' : '#64748b'} />
+                        <IoAppsOutline size={22} color={pathname === '/admin/ung-dung' ? '#6366f1' : '#64748b'} />
                         Tất cả ứng dụng
                     </Link>
 
@@ -265,12 +282,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         className={`menu-item-link ${pathname === '/admin/settings' ? 'active' : ''}`} 
                         style={{
                             display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-                            borderRadius: '12px', textDecoration: 'none', color: pathname === '/admin/settings' ? 'var(--primary)' : '#64748b',
-                            fontWeight: pathname === '/admin/settings' ? 800 : 600, background: pathname === '/admin/settings' ? '#f0fdfa' : 'transparent',
+                            borderRadius: '14px', textDecoration: 'none', color: pathname === '/admin/settings' ? '#0f766e' : '#64748b',
+                            fontWeight: pathname === '/admin/settings' ? 800 : 600,
+                            background: pathname === '/admin/settings' ? 'linear-gradient(135deg, rgba(255, 241, 242, 0.9) 0%, rgba(240, 253, 250, 0.95) 100%)' : 'transparent',
+                            border: pathname === '/admin/settings' ? '1px solid rgba(251, 207, 232, 0.72)' : '1px solid transparent',
+                            boxShadow: pathname === '/admin/settings' ? '0 8px 18px rgba(13, 148, 136, 0.08)' : 'none',
                             marginBottom: '5px'
                         }}
                     >
-                        <IoSettingsOutline size={22} color={pathname === '/admin/settings' ? 'var(--primary)' : '#64748b'} />
+                        <IoSettingsOutline size={22} color={pathname === '/admin/settings' ? '#64748b' : '#64748b'} />
                         Cài đặt
                     </Link>
                 </div>
@@ -278,8 +298,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 {/* Footer (User session & Logout) */}
                 <div className="menu-footer" style={{ 
                     padding: '20px', 
-                    borderTop: '1px solid #f1f5f9', 
-                    background: '#fafafa',
+                    borderTop: '1px solid rgba(251, 207, 232, 0.55)', 
+                    background: 'rgba(255, 247, 251, 0.74)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '12px'

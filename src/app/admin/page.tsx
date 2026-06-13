@@ -49,7 +49,6 @@ export default function AdminDashboard() {
 
     const [randomQuote, setRandomQuote] = useState('');
     const [showQuoteToast, setShowQuoteToast] = useState(false);
-    const [showExitDialog, setShowExitDialog] = useState(false);
     const [latestBP, setLatestBP] = useState<any>(null);
     const [latestBS, setLatestBS] = useState<any>(null);
     const [latestKick, setLatestKick] = useState<any>(null);
@@ -172,54 +171,6 @@ export default function AdminDashboard() {
         };
     }, []);
 
-    useEffect(() => {
-        // Đẩy trạng thái giả lập vào stack lịch sử để "chặn" nút back
-        window.history.pushState({ page: 'home-guard' }, '', window.location.href);
-
-        const handlePopState = (e: PopStateEvent) => {
-            // Khi người dùng bấm back ở trang chủ → hiện custom exit dialog
-            setShowExitDialog(true);
-            // Đẩy lại state giả lập để giữ nguyên URL (không bị back thật)
-            window.history.pushState({ page: 'home-guard' }, '', window.location.href);
-        };
-
-        window.addEventListener('popstate', handlePopState);
-        return () => {
-            window.removeEventListener('popstate', handlePopState);
-        };
-    }, []);
-
-    const handleExitApp = () => {
-        setShowExitDialog(false);
-        
-        // 1. Kiểm tra cầu nối Javascript (JS Bridge) phổ biến của Android WebView
-        const android = (window as any).Android || (window as any).AndroidInterface || (window as any).JSInterface;
-        if (android && typeof android.exitApp === 'function') {
-            android.exitApp();
-            return;
-        }
-        
-        // 2. Kiểm tra Cordova / PhoneGap app exit
-        const nav = navigator as any;
-        if (nav.app && typeof nav.app.exitApp === 'function') {
-            nav.app.exitApp();
-            return;
-        }
-
-        // 3. Thử đóng tab bằng window.close
-        window.close();
-
-        // 4. Nếu không phải môi trường app WebView/PWA mà chạy trên trình duyệt thường,
-        // quay về trang Landing chủ thay vì bị kẹt lại trang trắng about:blank
-        setTimeout(() => {
-            window.location.href = '/';
-        }, 200);
-    };
-
-    const handleStayInApp = () => {
-        setShowExitDialog(false);
-    };
-
     // Tính tổng chi phí khám thai từ các lịch không bị đánh dấu xóa (deletedAt)
     const activeVisits = visits.filter(v => !v.deletedAt);
     const totalCost = activeVisits.reduce((sum, v) => {
@@ -255,8 +206,6 @@ export default function AdminDashboard() {
         return "Chúc mẹ buổi tối ấm áp, thư thái 🌙";
     };
 
-    const progressPercent = Math.min(Math.round((weeks / 40) * 100), 100);
-
     // Tính cân nặng mẹ bầu tăng từ lúc trước bầu
     const getMaternalWeightGain = () => {
         const wBefore = Number(profile.weightBefore) || 0;
@@ -276,12 +225,6 @@ export default function AdminDashboard() {
         };
     };
     const weightGainInfo = getMaternalWeightGain();
-
-    const getTrimester = (w: number) => {
-        if (w <= 13) return "TCN 1";
-        if (w <= 27) return "TCN 2";
-        return "TCN 3";
-    };
 
     return (
         <>
@@ -402,180 +345,173 @@ export default function AdminDashboard() {
                     }
                 }
 
-                /* 1. HERO PROFILE CARD */
-                .hero-profile { 
-                    background:
-                        linear-gradient(135deg, #fff7fb 0%, #ffffff 46%, #fdf2f8 100%); 
-                    border: 1px solid rgba(251, 207, 232, 0.68); 
-                    box-shadow: 0 18px 42px rgba(236, 72, 153, 0.08); 
-                    border-radius: 32px; 
-                    position: relative; 
-                    overflow: hidden; 
-                    padding: 32px 24px; 
+                                                /* 1. PREMIUM HERO BANNER */
+                @keyframes gradient-mesh {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
                 }
-                .hero-profile::before {
-                    content: "";
-                    position: absolute;
-                    inset: 0;
-                    background-image:
-                        repeating-linear-gradient(45deg, transparent 0 18px, rgba(244, 114, 182, 0.08) 19px, transparent 21px),
-                        repeating-linear-gradient(-45deg, transparent 0 26px, rgba(251, 207, 232, 0.42) 27px, transparent 29px);
-                    opacity: 0.5;
-                    pointer-events: none;
+                @keyframes float-up-down {
+                    0% { transform: translateY(0); }
+                    50% { transform: translateY(-8px); }
+                    100% { transform: translateY(0); }
                 }
-                .hero-profile::after {
-                    content: "✿";
-                    position: absolute;
-                    right: 22px;
-                    top: 18px;
-                    color: rgba(236, 72, 153, 0.13);
-                    font-size: 86px;
-                    line-height: 1;
-                    transform: rotate(-14deg);
-                    pointer-events: none;
+                @keyframes avatar-pulse {
+                    0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); }
+                    70% { box-shadow: 0 0 0 15px rgba(236, 72, 153, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
                 }
-                .hero-bg-icon { 
-                    position: absolute; 
-                    top: -20px; 
-                    right: -20px; 
-                    opacity: 0.05; 
-                    color: #ec4899; 
-                    animation: float-heart 6s ease-in-out infinite; 
-                    pointer-events: none;
-                }
-                .hero-top-info {
+                .hero-profile-premium {
+                    position: relative;
+                    border-radius: 24px;
+                    overflow: hidden;
+                    padding: 36px;
+                    background: #f5f5f7;
+                    border: 1px solid rgba(0, 0, 0, 0.08);
+                    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.02);
                     display: flex;
+                    flex-direction: column;
+                    gap: 32px;
+                    z-index: 1;
+                    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+                }
+                
+                .hero-top-section {
+                    display: flex;
+                    justify-content: space-between;
                     align-items: center;
-                    gap: 20px;
                     position: relative;
                     z-index: 2;
                 }
-                .avatar-box { 
-                    width: 96px; 
-                    height: 96px; 
-                    border-radius: 32px; 
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06); 
-                    border: 4px solid #ffffff; 
-                    background: #f8fafc; 
-                    flex-shrink: 0; 
-                    display: flex; 
-                    align-items: center; 
-                    justify-content: center; 
-                    overflow: hidden; 
-                    transition: transform 0.3s ease;
-                }
-                .avatar-box:hover {
-                    transform: scale(1.05);
-                }
-                .avatar-box img { 
-                    width: 100%; 
-                    height: 100%; 
-                    object-fit: cover; 
-                }
-                .avatar-placeholder {
-                    width: 100%;
-                    height: 100%;
-                    background: #f1f5f9;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #94a3b8;
-                }
-                .hero-welcome-text {
+
+                .hero-greeting-area {
                     display: flex;
                     flex-direction: column;
                     gap: 4px;
-                }
-                .greeting-text {
-                    font-size: 0.95rem;
-                    color: #64748b;
-                    font-weight: 700;
-                    letter-spacing: 0.3px;
-                }
-                .mother-name { 
-                    font-size: 1.65rem; 
-                    font-weight: 900; 
-                    color: #0f172a; 
-                    line-height: 1.2; 
-                    letter-spacing: -0.5px;
-                }
-                .edd-text { 
-                    font-size: 0.95rem; 
-                    color: #64748b; 
-                    font-weight: 600; 
-                }
-                .edd-date { 
-                    color: #0f172a; 
-                    font-weight: 800; 
-                    background: #f1f5f9;
-                    padding: 4px 10px;
-                    border-radius: 12px;
-                }
-                .allergy-badge { 
-                    background: #fef2f2; 
-                    color: #b91c1c; 
-                    padding: 10px 16px; 
-                    border-radius: 20px; 
-                    font-size: 0.85rem; 
-                    font-weight: 700; 
-                    margin-top: 18px; 
-                    display: flex; 
-                    align-items: center; 
-                    gap: 8px; 
-                    position: relative; 
-                    z-index: 2; 
-                    border: 1px solid #fee2e2;
-                    align-self: flex-start;
+                    max-width: 70%;
                 }
 
-                /* Timeline progress design */
-                .pregnancy-timeline-container {
-                    margin-top: 28px;
-                    position: relative;
-                    z-index: 2;
-                    background: rgba(255, 255, 255, 0.66);
-                    padding: 20px;
-                    border-radius: 24px;
-                    border: 1px solid rgba(251, 207, 232, 0.5);
-                    box-shadow: 0 10px 24px rgba(236, 72, 153, 0.06);
-                }
-                .timeline-header {
-                    display: flex;
-                    justify-content: space-between;
-                    font-size: 0.9rem;
-                    color: #475569;
-                    margin-bottom: 12px;
-                    font-weight: 700;
-                }
-                .timeline-header strong {
-                    color: #0f172a;
-                    font-size: 1.05rem;
-                }
-                .percent-text {
-                    color: #0ea5e9;
-                    font-weight: 800;
-                }
-                .timeline-track {
-                    height: 12px;
-                    background: #e2e8f0;
-                    border-radius: 999px;
-                    overflow: hidden;
-                    position: relative;
-                }
-                .timeline-fill {
-                    height: 100%;
-                    background: #0ea5e9;
-                    border-radius: 999px;
-                    transition: width 1s ease-out;
-                }
-                .timeline-labels {
-                    display: flex;
-                    justify-content: space-between;
-                    font-size: 0.8rem;
-                    color: #94a3b8;
-                    margin-top: 8px;
-                    font-weight: 800;
+                .hero-subtitle-apple {
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    color: #86868b;
+                    letter-spacing: 0.08em;
                     text-transform: uppercase;
+                }
+
+                .hero-name-premium {
+                    font-size: 2.2rem;
+                    font-weight: 700;
+                    line-height: 1.15;
+                    letter-spacing: -0.025em;
+                    color: #1d1d1f;
+                    margin: 0;
+                    word-break: break-word;
+                }
+
+                .hero-avatar-container {
+                    position: relative;
+                    width: 76px;
+                    height: 76px;
+                    border-radius: 50%;
+                    background: #ffffff;
+                    padding: 2px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                    border: 1px solid rgba(0, 0, 0, 0.08);
+                    flex-shrink: 0;
+                    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+                }
+                .hero-avatar-container:hover {
+                    transform: scale(1.05);
+                }
+
+                .hero-avatar-inner {
+                    width: 100%;
+                    height: 100%;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    background: #f5f5f7;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #86868b;
+                }
+
+                .hero-avatar-inner img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .hero-floating-dock {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    background: #ffffff;
+                    border: 1px solid rgba(0, 0, 0, 0.06);
+                    padding: 20px 28px;
+                    border-radius: 20px;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+                    z-index: 2;
+                }
+
+                .dock-metrics {
+                    display: flex;
+                    gap: 48px;
+                    width: 100%;
+                }
+
+                .dock-metric-item {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    flex: 1;
+                }
+
+                .dock-label {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 0.72rem;
+                    font-weight: 600;
+                    color: #86868b;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+
+                .dock-value {
+                    font-size: 1.3rem;
+                    font-weight: 600;
+                    color: #1d1d1f;
+                    letter-spacing: -0.015em;
+                }
+                .dock-value.highlight-pink { color: #ff2d55; }
+                .dock-value.highlight-blue { color: #007aff; }
+                .dock-value.highlight-purple { color: #5856d6; }
+
+                @media (max-width: 768px) {
+                    .hero-profile-premium {
+                        padding: 24px;
+                        border-radius: 20px;
+                        gap: 24px;
+                    }
+                    .hero-name-premium {
+                        font-size: 1.8rem;
+                    }
+                    .hero-avatar-container {
+                        width: 64px;
+                        height: 64px;
+                    }
+                    .hero-floating-dock {
+                        padding: 16px 20px;
+                        border-radius: 16px;
+                    }
+                    .dock-metrics {
+                        gap: 32px;
+                    }
+                    .dock-value {
+                        font-size: 1.15rem;
+                    }
                 }
 
                 /* 2. VITALS & STATS GRID */
@@ -886,9 +822,8 @@ export default function AdminDashboard() {
                     font-weight: 600;
                     color: #7c2d12;
                     margin-top: 4px;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
+                    white-space: normal;
+                    word-break: break-word;
                 }
                 .nutrition-meta {
                     font-size: 0.85rem;
@@ -985,133 +920,47 @@ export default function AdminDashboard() {
             )}
 
             <div className="dashboard-flex-layout">
-                {/* 1. HỒ SƠ MẸ BẦU (HERO CARD) */}
-                <div className="hero-profile fade-in db-hero">
-                    
-                    <div className="hero-top-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', width: '100%' }}>
-                        <div className="hero-welcome-text" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <div className="mother-name" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#1e293b', lineHeight: 1.15 }}>
+                                                {/* 1. HỒ SƠ MẸ BẦU (HERO CARD PREMIUM) */}
+                <div className="hero-profile-premium fade-in">
+                    <div className="hero-top-section">
+                        <div className="hero-greeting-area">
+                            <span className="hero-subtitle-apple">Hồ sơ mẹ bầu</span>
+                            <h1 className="hero-name-premium">
                                 {profile.name || auth.currentUser?.displayName || 'Mẹ bầu xinh đẹp'}
-                            </div>
-                            
-                            {/* Dòng thông tin phụ gọn gàng */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', fontSize: '0.8rem', color: '#475569', marginTop: '2px', fontWeight: 600 }}>
-                                <span>Dự sinh: <strong style={{ color: '#ec4899' }}>{eddStr}</strong></span>
-                                {profile.bloodType && (
-                                    <>
-                                        <span style={{ color: '#cbd5e1' }}>•</span>
-                                        <span>Máu: <strong style={{ color: '#ef4444' }}>{profile.bloodType}</strong></span>
-                                    </>
-                                )}
-                                {hasAllergy && (
-                                    <>
-                                        <span style={{ color: '#cbd5e1' }}>•</span>
-                                        <span style={{ color: '#b91c1c' }}>⚠️ Dị ứng: {profile.allergy}</span>
-                                    </>
-                                )}
-                            </div>
-                            
-                            {/* Nút gọi khẩn cấp gọn gàng gần avatar */}
-                            {/* Nút gọi khẩn cấp & cảnh báo đỏ gọn gàng */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                                {profile.phoneHusband && (
-                                    <a href={`tel:${profile.phoneHusband}`} style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                        background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)', 
-                                        color: '#e11d48', padding: '6px 14px 6px 8px',
-                                        borderRadius: '999px', fontSize: '0.82rem', fontWeight: 800,
-                                        border: '1px solid #fecdd3', width: 'fit-content',
-                                        textDecoration: 'none',
-                                        boxShadow: '0 4px 10px rgba(225, 29, 72, 0.1)',
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                                    }}
-                                    onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                    onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                                    >
-                                        <div style={{
-                                            background: '#e11d48', color: 'white', 
-                                            width: '26px', height: '26px', borderRadius: '50%', 
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}>
-                                            <IoCall size={14} style={{ animation: 'pulse-icon 2s infinite' }} />
-                                        </div>
-                                        Gọi chồng
-                                    </a>
-                                )}
-                                <Link href="/admin/canh-bao" style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                    background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)', 
-                                    color: '#dc2626', padding: '6px 14px 6px 8px',
-                                    borderRadius: '999px', fontSize: '0.82rem', fontWeight: 800,
-                                    border: '1px solid #fecdd3', width: 'fit-content',
-                                    textDecoration: 'none',
-                                    boxShadow: '0 4px 10px rgba(220, 38, 38, 0.1)',
-                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                                }}
-                                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                                >
-                                    <div style={{
-                                        background: '#dc2626', color: 'white', 
-                                        width: '26px', height: '26px', borderRadius: '50%', 
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                    }}>
-                                        <IoWarningOutline size={14} />
-                                    </div>
-                                    Cảnh báo đỏ
-                                </Link>
-                            </div>
+                            </h1>
                         </div>
-                        
-                        {/* Khung chứa ảnh đại diện kèm họa tiết bông hoa ôm quanh */}
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, width: '130px', height: '130px' }}>
-                            {/* Bông hoa hồng ôm trọn phía sau */}
-                            <IoFlowerOutline 
-                                style={{ 
-                                    position: 'absolute', 
-                                    color: '#fbcfe8', 
-                                    fontSize: '130px', 
-                                    opacity: 0.9,
-                                    pointerEvents: 'none',
-                                    animation: 'pulse-icon 4s ease-in-out infinite'
-                                }} 
-                            />
-                            
-                            <div 
-                                className="avatar-box" 
-                                style={{ 
-                                    position: 'relative',
-                                    zIndex: 2
-                                }}
-                                onMouseOver={(e) => {
-                                    if (profile.avatar) e.currentTarget.style.transform = 'scale(1.05)';
-                                }}
-                                onMouseOut={(e) => {
-                                    if (profile.avatar) e.currentTarget.style.transform = 'scale(1)';
-                                }}
-                            >
+
+                        <div className="hero-avatar-container">
+                            <div className="hero-avatar-inner">
                                 {profile.avatar ? (
-                                    <img src={profile.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={profile.avatar} alt="Avatar" />
                                 ) : (
-                                    <div className="avatar-placeholder" style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #fff5f7 0%, #f5f3ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ec4899' }}>
-                                        <IoPerson size={36} />
-                                    </div>
+                                    <IoPerson size={36} />
                                 )}
                             </div>
                         </div>
                     </div>
-                    
-                    {/* Tiến trình thai kỳ rút gọn sạch sẽ */}
-                    <div className="pregnancy-timeline-container" style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.45)', border: '1px solid rgba(255, 255, 255, 0.5)' }}>
-                        <div className="timeline-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '0.82rem' }}>
-                            <div>
-                                <strong>Tuần {weeks}/40</strong> 
-                                <span style={{ fontSize: '0.7rem', background: '#f5f3ff', color: '#8b5cf6', padding: '2px 8px', borderRadius: '8px', marginLeft: '6px', border: '1px solid #ddd6fe', fontWeight: 700 }}>{getTrimester(weeks)}</span>
+
+                    <div className="hero-floating-dock">
+                        <div className="dock-metrics">
+                            <div className="dock-metric-item">
+                                <div className="dock-label">
+                                    <IoPulseOutline size={14} /> Tuần thai
+                                </div>
+                                <div className="dock-value highlight-purple">Tuần {weeks}/40</div>
                             </div>
-                            <span style={{ fontWeight: 800, color: '#ec4899' }}>{progressPercent}% chặng đường</span>
-                        </div>
-                        <div className="timeline-track" style={{ height: '8px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
-                            <div className="timeline-fill" style={{ width: `${progressPercent}%`, height: '100%', background: 'linear-gradient(90deg, #ec4899 0%, #8b5cf6 100%)', borderRadius: '999px', transition: 'width 1s ease-out' }}></div>
+                            <div className="dock-metric-item">
+                                <div className="dock-label">
+                                    <IoCalendarOutline size={14} /> Dự sinh
+                                </div>
+                                <div className="dock-value highlight-pink">{eddStr}</div>
+                            </div>
+                            <div className="dock-metric-item">
+                                <div className="dock-label">
+                                    <IoHeartOutline size={14} /> Nhóm máu
+                                </div>
+                                <div className="dock-value highlight-blue">{profile.bloodType || '--'}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1153,7 +1002,7 @@ export default function AdminDashboard() {
                     <div className="health-card health-tracker-grid">
                         <h3 className="health-card-title" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '8px' }}>
                             <IoHeartOutline style={{ color: '#ec4899' }} size={22} className="pulse-heart" />
-                            Theo dõi sức khỏe
+                            Thông tin toàn cảnh
                         </h3>
 
                         {/* THẺ LỊCH KHÁM THAI */}
@@ -1354,156 +1203,6 @@ export default function AdminDashboard() {
             </div>
 
         </div>
-
-
-        {/* ===== EXIT APP CONFIRMATION DIALOG ===== */}
-        {showExitDialog && (
-            <div
-                onClick={handleStayInApp}
-                style={{
-                    position: 'fixed',
-                    inset: 0,
-                    zIndex: 99999,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '24px',
-                    background: 'rgba(15, 23, 42, 0.55)',
-                    backdropFilter: 'blur(6px)',
-                    WebkitBackdropFilter: 'blur(6px)',
-                    animation: 'fadeInOverlay 0.2s ease-out',
-                }}
-            >
-                <style jsx>{`
-                    @keyframes fadeInOverlay {
-                        from { opacity: 0; }
-                        to { opacity: 1; }
-                    }
-                    @keyframes slideUpDialog {
-                        from { opacity: 0; transform: translateY(24px) scale(0.96); }
-                        to { opacity: 1; transform: translateY(0) scale(1); }
-                    }
-                `}</style>
-                <div
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                        background: 'white',
-                        borderRadius: '28px',
-                        padding: '32px 28px 24px',
-                        maxWidth: '340px',
-                        width: '100%',
-                        textAlign: 'center',
-                        boxShadow: '0 32px 80px rgba(0,0,0,0.18)',
-                        animation: 'slideUpDialog 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                        position: 'relative',
-                        overflow: 'hidden',
-                    }}
-                >
-                    {/* Gradient top accent */}
-                    <div style={{
-                        position: 'absolute',
-                        top: 0, left: 0, right: 0,
-                        height: '4px',
-                        background: 'linear-gradient(90deg, #ec4899, #8b5cf6)',
-                    }} />
-
-                    {/* Icon */}
-                    <div style={{
-                        width: '72px',
-                        height: '72px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #fff1f2, #fce7f3)',
-                        border: '2px solid #ffe4e6',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 20px',
-                        fontSize: '2rem',
-                    }}>
-                        🌸
-                    </div>
-
-                    {/* Title */}
-                    <h3 style={{
-                        margin: '0 0 10px',
-                        fontSize: '1.2rem',
-                        fontWeight: 800,
-                        color: '#1e293b',
-                    }}>
-                        Thoát ứng dụng?
-                    </h3>
-
-                    {/* Message */}
-                    <p style={{
-                        margin: '0 0 28px',
-                        fontSize: '0.88rem',
-                        color: '#64748b',
-                        lineHeight: 1.6,
-                        fontWeight: 500,
-                    }}>
-                        Bạn có muốn thoát khỏi <strong style={{ color: '#ec4899' }}>ThaiKyPro</strong> không? Mọi dữ liệu đã được lưu tự động. 💕
-                    </p>
-
-                    {/* Buttons */}
-                    <div style={{
-                        display: 'flex',
-                        gap: '12px',
-                    }}>
-                        <button
-                            onClick={handleStayInApp}
-                            style={{
-                                flex: 1,
-                                padding: '13px',
-                                borderRadius: '14px',
-                                border: '1.5px solid #e2e8f0',
-                                background: '#f8fafc',
-                                color: '#475569',
-                                fontSize: '0.92rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.background = '#f1f5f9';
-                                e.currentTarget.style.borderColor = '#cbd5e1';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.background = '#f8fafc';
-                                e.currentTarget.style.borderColor = '#e2e8f0';
-                            }}
-                        >
-                            Ở lại 💪
-                        </button>
-                        <button
-                            onClick={handleExitApp}
-                            style={{
-                                flex: 1,
-                                padding: '13px',
-                                borderRadius: '14px',
-                                border: 'none',
-                                background: 'linear-gradient(135deg, #ec4899, #8b5cf6)',
-                                color: 'white',
-                                fontSize: '0.92rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                boxShadow: '0 4px 15px rgba(236, 72, 153, 0.3)',
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.opacity = '0.9';
-                                e.currentTarget.style.transform = 'translateY(-1px)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.opacity = '1';
-                                e.currentTarget.style.transform = 'translateY(0)';
-                            }}
-                        >
-                            Thoát
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
 
         {/* Custom Toast Notification for Daily Quote */}
         {randomQuote && (
