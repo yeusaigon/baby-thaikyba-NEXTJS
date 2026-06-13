@@ -73,7 +73,7 @@ export default function Header({ onOpenMenu }: HeaderProps) {
                 >
                     <IoMenuOutline size={26} />
                 </button>
-                <Link href="/admin" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+                <Link href="/admin" replace style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
                     <img 
                         src="/logo.png" 
                         width="36" 

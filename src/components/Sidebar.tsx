@@ -10,7 +10,9 @@ import {
     IoCalendarOutline, IoRestaurantOutline, IoImagesOutline, 
     IoBriefcaseOutline, IoBookOutline, IoMusicalNotesOutline, 
     IoShieldHalfOutline, IoHelpOutline, IoLogOutOutline, 
-    IoPersonOutline, IoFlowerOutline, IoCloseOutline
+    IoPersonOutline, IoFlowerOutline, IoCloseOutline,
+    IoMedicalOutline, IoHeartOutline, IoWalletOutline, IoAppsOutline,
+    IoPulseOutline, IoFootstepsOutline, IoWarningOutline
 } from 'react-icons/io5';
 
 // Define MENU DEFS
@@ -20,14 +22,20 @@ export const MENU_DEFS = [
     { id: 'sokham', label: 'Sổ khám bệnh', icon: 'clipboard-outline', color: '#10b981', target: '/admin/sokhambenh', group: 'health' },
     { id: 'lichkham', label: 'Lịch khám thai', icon: 'calendar-outline', color: '#3b82f6', target: '/admin/lich-kham', group: 'health' },
     { id: 'dinhduong', label: 'Dinh dưỡng', icon: 'restaurant-outline', color: '#f97316', target: '/admin/dinh-duong', group: 'health' },
+    { id: 'suckhoe', label: 'Theo dõi sức khỏe', icon: 'pulse-outline', color: '#06b6d4', target: '/admin/suc-khoe', group: 'health' },
     { id: 'album', label: 'Album ảnh', icon: 'images-outline', color: '#8b5cf6', target: '/admin/album', group: 'tool' },
     { id: 'chuanbi', label: 'Đồ đi sinh', icon: 'briefcase-outline', color: '#f59e0b', target: '/admin/chuan-bi-di-sinh', group: 'tool' },
+    { id: 'tiemchung', label: 'Tiêm chủng', icon: 'medical-outline', color: '#10b981', target: '/admin/tiem-chung', group: 'tool' },
+    { id: 'nhatkybe', label: 'Nhật ký bé', icon: 'heart-outline', color: '#ec4899', target: '/admin/nhat-ky-be', group: 'tool' },
+    { id: 'taichinh', label: 'Tài chính', icon: 'wallet-outline', color: '#f59e0b', target: '/admin/tai-chinh', group: 'tool' },
+    { id: 'cudongthai', label: 'Cử động thai', icon: 'footsteps-outline', color: '#db2777', target: '/admin/cu-dong-thai', group: 'tool' },
     { id: 'note', label: 'Cẩm nang', icon: 'book-outline', color: '#14b8a6', target: '/admin/note', group: 'knowledge' },
     { id: 'thaigiao', label: 'Thai giáo', icon: 'musical-notes-outline', color: '#db2777', target: '/admin/thai-giao', group: 'knowledge' },
-    { id: 'kiengky', label: 'Kiêng kỵ', icon: 'shield-half-outline', color: '#ef4444', target: '/admin/kieng-ky', group: 'knowledge' }
+    { id: 'kiengky', label: 'Kiêng kỵ', icon: 'shield-half-outline', color: '#ef4444', target: '/admin/kieng-ky', group: 'knowledge' },
+    { id: 'canhbao', label: 'Cảnh báo đỏ', icon: 'warning-outline', color: '#ef4444', target: '/admin/canh-bao', group: 'knowledge' }
 ];
 
-export const DEFAULT_MENU_IDS = ['album', 'sokham', 'note', 'chuanbi', 'settings'];
+export const DEFAULT_MENU_IDS = ['album', 'sokham', 'note', 'chuanbi', 'settings', 'tiemchung', 'nhatkybe', 'taichinh', 'suckhoe', 'cudongthai', 'canhbao'];
 
 const getMenuIcon = (iconName: string, color: string, size = 22) => {
     switch (iconName) {
@@ -41,6 +49,12 @@ const getMenuIcon = (iconName: string, color: string, size = 22) => {
         case 'book-outline': return <IoBookOutline size={size} color={color} />;
         case 'musical-notes-outline': return <IoMusicalNotesOutline size={size} color={color} />;
         case 'shield-half-outline': return <IoShieldHalfOutline size={size} color={color} />;
+        case 'medical-outline': return <IoMedicalOutline size={size} color={color} />;
+        case 'heart-outline': return <IoHeartOutline size={size} color={color} />;
+        case 'wallet-outline': return <IoWalletOutline size={size} color={color} />;
+        case 'pulse-outline': return <IoPulseOutline size={size} color={color} />;
+        case 'footsteps-outline': return <IoFootstepsOutline size={size} color={color} />;
+        case 'warning-outline': return <IoWarningOutline size={size} color={color} />;
         default: return <IoHelpOutline size={size} color={color} />;
     }
 };
@@ -179,6 +193,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     {/* Logo & Brand */}
                     <Link 
                         href="/admin" 
+                        replace
                         onClick={onClose}
                         style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 2, textDecoration: 'none' }}
                     >
@@ -206,6 +221,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         return (
                             <Link 
                                 href={item.target} 
+                                replace
                                 key={item.id} 
                                 onClick={onClose} 
                                 className={`menu-item-link ${isActive ? 'active' : ''}`} 
@@ -224,9 +240,27 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                     <div style={{ height: '1px', background: '#f1f5f9', margin: '10px 0' }} />
 
+                    {/* All Apps Link */}
+                    <Link 
+                        href="/admin/ung-dung" 
+                        replace
+                        onClick={onClose} 
+                        className={`menu-item-link ${pathname === '/admin/ung-dung' ? 'active' : ''}`} 
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+                            borderRadius: '12px', textDecoration: 'none', color: pathname === '/admin/ung-dung' ? 'var(--primary)' : '#64748b',
+                            fontWeight: pathname === '/admin/ung-dung' ? 800 : 600, background: pathname === '/admin/ung-dung' ? '#f0fdfa' : 'transparent',
+                            marginBottom: '5px'
+                        }}
+                    >
+                        <IoAppsOutline size={22} color={pathname === '/admin/ung-dung' ? 'var(--primary)' : '#64748b'} />
+                        Tất cả ứng dụng
+                    </Link>
+
                     {/* Fixed Settings link */}
                     <Link 
                         href="/admin/settings" 
+                        replace
                         onClick={onClose} 
                         className={`menu-item-link ${pathname === '/admin/settings' ? 'active' : ''}`} 
                         style={{

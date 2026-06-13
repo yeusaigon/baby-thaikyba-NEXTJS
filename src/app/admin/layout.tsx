@@ -1,20 +1,137 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
-import { IoMenuOutline, IoHomeOutline, IoCloudOfflineOutline, IoCloseOutline } from 'react-icons/io5';
+import { 
+    IoMenuOutline, IoHomeOutline, IoCloudOfflineOutline, 
+    IoCloseOutline, IoNotificationsOutline, IoWalletOutline,
+    IoRestaurantOutline, IoMedicalOutline, IoHeartOutline,
+    IoSettingsOutline, IoClipboardOutline, IoCalendarOutline,
+    IoImagesOutline, IoBriefcaseOutline, IoBookOutline,
+    IoShieldHalfOutline, IoMusicalNotesOutline, IoAppsOutline
+} from 'react-icons/io5';
 import './splash.css';
+
+const ROUTE_CONFIGS: Record<string, { title: string; background: string; textColor: string; btnColor: string; icon: React.ReactNode }> = {
+    '/admin': {
+        title: 'ThaiKyPro',
+        background: 'linear-gradient(135deg, #fff5f7 0%, #f0f9ff 50%, #f5f3ff 100%)',
+        textColor: '#0d9488',
+        btnColor: '#0d9488',
+        icon: null
+    },
+    '/admin/settings': {
+        title: 'Cài đặt hệ thống',
+        background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoSettingsOutline size={18} />
+    },
+    '/admin/ung-dung': {
+        title: 'Tất cả ứng dụng',
+        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoAppsOutline size={18} />
+    },
+    '/admin/sokhambenh': {
+        title: 'Sổ khám bệnh',
+        background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoClipboardOutline size={18} />
+    },
+    '/admin/lich-kham': {
+        title: 'Lịch khám thai',
+        background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #f472b6 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoCalendarOutline size={18} />
+    },
+    '/admin/dinh-duong': {
+        title: 'Dinh dưỡng thai kỳ',
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoRestaurantOutline size={18} />
+    },
+    '/admin/album': {
+        title: 'Album ảnh của bé',
+        background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoImagesOutline size={18} />
+    },
+    '/admin/chuan-bi-di-sinh': {
+        title: 'Giỏ đồ đi sinh',
+        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoBriefcaseOutline size={18} />
+    },
+    '/admin/tiem-chung': {
+        title: 'Sổ tiêm chủng',
+        background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoMedicalOutline size={18} />
+    },
+    '/admin/nhat-ky-be': {
+        title: 'Nhật ký của bé',
+        background: 'linear-gradient(135deg, #db2777 0%, #ec4899 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoHeartOutline size={18} />
+    },
+    '/admin/tai-chinh': {
+        title: 'Sổ chi tiêu sắm đồ',
+        background: 'linear-gradient(135deg, #ea580c 0%, #ca8a04 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoWalletOutline size={18} />
+    },
+    '/admin/note': {
+        title: 'Cẩm nang thai kỳ',
+        background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoBookOutline size={18} />
+    },
+    '/admin/thai-giao': {
+        title: 'Thai giáo cho bé',
+        background: 'linear-gradient(135deg, #db2777 0%, #b91c1c 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoMusicalNotesOutline size={18} />
+    },
+    '/admin/kieng-ky': {
+        title: 'Kiêng kỵ thai kỳ',
+        background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+        textColor: '#ffffff',
+        btnColor: '#ffffff',
+        icon: <IoShieldHalfOutline size={18} />
+    }
+};
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
+    const pathname = usePathname();
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isOffline, setIsOffline] = useState(false);
     const [showSkeleton, setShowSkeleton] = useState(false);
+
+    const currentConfig = ROUTE_CONFIGS[pathname] || {
+        title: 'ThaiKyPro',
+        background: 'rgba(255, 255, 255, 0.85)',
+        textColor: '#1e293b',
+        btnColor: '#64748b',
+        icon: null
+    };
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -22,7 +139,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 router.replace('/login');
             } else {
                 setUser(currentUser);
-                setLoading(false); // Tải dữ liệu ngay lập tức không giữ trễ
+                setLoading(false);
             }
         });
 
@@ -34,7 +151,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (loading) {
             timer = setTimeout(() => {
                 setShowSkeleton(true);
-            }, 300); // Chỉ hiện khung xương nếu thời gian chờ quá 300ms (tránh chớp nháy khi mạng nhanh)
+            }, 300);
         } else {
             setShowSkeleton(false);
         }
@@ -94,79 +211,101 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
             
-            {/* Nút Menu 3 gạch phong cách Glassmorphism đồng bộ màu giao diện, trôi nổi cố định */}
-            <button 
-                className="mobile-menu-btn"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                style={{ 
-                    position: 'fixed', 
-                    top: '16px', 
-                    left: '16px', 
-                    zIndex: 90,
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.75)',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    border: '1.5px solid rgba(13, 148, 136, 0.2)',
-                    boxShadow: '0 4px 12px rgba(13, 148, 136, 0.08)',
+            {/* Mobile Sticky Header Bar */}
+            <div className="mobile-header-bar" style={{
+                display: 'none', // Overridden to 'flex' in responsive.css
+                position: 'fixed',
+                top: 0, left: 0, right: 0,
+                height: '56px',
+                background: currentConfig.background,
+                backdropFilter: pathname === '/admin' ? 'blur(12px)' : 'none',
+                WebkitBackdropFilter: pathname === '/admin' ? 'blur(12px)' : 'none',
+                borderBottom: pathname === '/admin' ? '1px solid rgba(226, 232, 240, 0.8)' : 'none',
+                zIndex: 85,
+                alignItems: 'center',
+                padding: '0 16px',
+                justifyContent: 'space-between',
+                transition: 'all 0.3s ease'
+            }}>
+                <button 
+                    onClick={() => setIsMenuOpen(true)}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: currentConfig.btnColor,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '8px',
+                        marginLeft: '-8px'
+                    }}
+                >
+                    <IoMenuOutline size={26} />
+                </button>
+
+                {/* Absolutely Centered Title / Brand */}
+                <div style={{
+                    position: 'absolute',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#0d9488',
-                    cursor: 'pointer',
-                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                    transform: isMenuOpen ? 'translateX(280px)' : 'translateX(0)',
-                    opacity: isMenuOpen ? 0 : 1,
-                    pointerEvents: isMenuOpen ? 'none' : 'auto'
-                }}
-                onMouseOver={(e) => {
-                    e.currentTarget.style.background = '#0d9488';
-                    e.currentTarget.style.color = 'white';
-                    e.currentTarget.style.borderColor = '#0d9488';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(13, 148, 136, 0.25)';
-                }}
-                onMouseOut={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.75)';
-                    e.currentTarget.style.color = '#0d9488';
-                    e.currentTarget.style.borderColor = 'rgba(13, 148, 136, 0.2)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(13, 148, 136, 0.08)';
-                }}
-            >
-                <IoMenuOutline size={20} />
-            </button>
+                    gap: '6px',
+                    pointerEvents: 'none',
+                    textAlign: 'center',
+                    color: currentConfig.textColor
+                }}>
+                    {pathname === '/admin' ? (
+                        <span style={{ fontSize: '1.05rem', fontWeight: 900, color: currentConfig.textColor, letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ color: '#ea580c' }}>ThaiKy</span>Pro
+                        </span>
+                    ) : (
+                        <span style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '-0.2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {currentConfig.icon}
+                            {currentConfig.title}
+                        </span>
+                    )}
+                </div>
+
+                {/* Right Area: Action Items (Notification Bell / Future APIs) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button 
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: currentConfig.btnColor,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '6px',
+                            position: 'relative',
+                            marginRight: '-4px'
+                        }}
+                        onClick={() => alert("Chức năng thông báo & đồng bộ tiện ích đang được phát triển.")}
+                    >
+                        <IoNotificationsOutline size={22} />
+                        <span style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: '4px',
+                            width: '6px',
+                            height: '6px',
+                            background: currentConfig.textColor === '#ffffff' ? '#ffffff' : '#ef4444',
+                            borderRadius: '50%',
+                            border: currentConfig.textColor === '#ffffff' ? '1px solid ' + currentConfig.background : 'none'
+                        }} />
+                    </button>
+                </div>
+            </div>
 
             <main id="main-content" style={{ 
                 flex: 1, 
-                position: 'relative',
-                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                transform: isMenuOpen ? 'translateX(280px)' : 'none'
+                position: 'relative'
             }}>
                 {loading ? (showSkeleton ? <AdminPageSkeleton /> : null) : children}
             </main>
-
-            <style jsx global>{`
-                /* Hide mobile elements on PC screen (min-width: 1024px) */
-                @media (min-width: 1024px) {
-                    .mobile-menu-btn {
-                        display: none !important;
-                    }
-                    #main-content {
-                        transform: none !important;
-                    }
-                }
-                 /* Hiệu ứng nhấp nháy xương (Skeleton Shimmer) */
-                 .skeleton-item {
-                     background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-                     background-size: 200% 100%;
-                     animation: shimmer-ani 1.5s infinite linear;
-                 }
-                 @keyframes shimmer-ani {
-                     0% { background-position: -200% 0; }
-                     100% { background-position: 200% 0; }
-                 }
-             `}</style>
         </div>
     );
 }
@@ -178,7 +317,7 @@ function AdminPageSkeleton() {
             <div className="skeleton-item" style={{ height: '170px', borderRadius: '24px', width: '100%' }} />
 
             {/* Vitals Grid Skeletons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+            <div className="vitals-grid-skeleton" style={{ display: 'grid', gap: '16px' }}>
                 <div className="skeleton-item" style={{ height: '76px', borderRadius: '20px' }} />
                 <div className="skeleton-item" style={{ height: '76px', borderRadius: '20px' }} />
                 <div className="skeleton-item" style={{ height: '76px', borderRadius: '20px' }} />
@@ -199,23 +338,6 @@ function AdminPageSkeleton() {
                     <div className="skeleton-item" style={{ height: '180px', borderRadius: '24px' }} />
                 </div>
             </div>
-            
-            <style jsx>{`
-                @media (max-width: 900px) {
-                    .split-grid-skeleton {
-                        grid-template-columns: 1fr !important;
-                        gap: 16px !important;
-                    }
-                }
-                @media (max-width: 600px) {
-                    .health-grid-skeleton {
-                        grid-template-columns: 1fr !important;
-                    }
-                    div[style*="gridTemplateColumns: repeat(4, 1fr)"] {
-                        grid-template-columns: repeat(2, 1fr) !important;
-                    }
-                }
-            `}</style>
         </div>
     );
 }

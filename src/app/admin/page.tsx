@@ -3,62 +3,76 @@ import { useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { collection, doc, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { getDataForWeek, PregnancyWeekData } from '@/lib/data';
-import { MENU_DEFS } from '@/components/Sidebar';
+
 import { QUOTES } from '@/lib/quotes';
 import Link from 'next/link';
 import { 
-    IoFlowerOutline, IoPerson, IoMedkitOutline, IoCalendarOutline, 
-    IoRestaurantOutline, IoAddOutline, IoLogoGoogle, IoCall, IoAppsOutline,
-    IoClipboardOutline, IoImagesOutline, IoBriefcaseOutline, IoBookOutline,
-    IoMusicalNotesOutline, IoShieldHalfOutline, IoHeartOutline, IoSparklesOutline,
-    IoTimeOutline, IoLocationOutline, IoWalletOutline, IoWaterOutline
+    IoFlowerOutline, IoPerson, IoCalendarOutline, 
+    IoRestaurantOutline, IoAddOutline, IoLogoGoogle, IoCall,
+    IoHeartOutline, IoSparklesOutline,
+    IoWalletOutline,
+    IoPulseOutline, IoFootstepsOutline, IoWarningOutline
 } from 'react-icons/io5';
+
+const getTimeMillis = (value: any) => {
+    if (!value) return 0;
+    if (typeof value.toMillis === 'function') return value.toMillis();
+    if (value instanceof Date) return value.getTime();
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        const parsed = new Date(value).getTime();
+        return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    if (typeof value.seconds === 'number') {
+        return value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1000000);
+    }
+    return 0;
+};
+
+const pickLatestMeal = (meals: any[]) => {
+    return [...meals].sort((a, b) => {
+        const byMealTime = (b.datetime || '').localeCompare(a.datetime || '');
+        if (byMealTime !== 0) return byMealTime;
+        return getTimeMillis(b.timestamp) - getTimeMillis(a.timestamp);
+    })[0] || null;
+};
 
 export default function AdminDashboard() {
     const [profile, setProfile] = useState<any>({});
     const [visits, setVisits] = useState<any[]>([]);
     const [latestFood, setLatestFood] = useState<any>(null);
+    const [financeTxs, setFinanceTxs] = useState<any[]>([]);
     const [weeks, setWeeks] = useState(0);
     const [eddStr, setEddStr] = useState('--/--/----');
     const [daysLeft, setDaysLeft] = useState<number | null>(null);
     const [pregnancyInfo, setPregnancyInfo] = useState<PregnancyWeekData | null>(null);
-    const [waterIntake, setWaterIntake] = useState(1000);
+
     const [randomQuote, setRandomQuote] = useState('');
     const [showQuoteToast, setShowQuoteToast] = useState(false);
     const [showExitDialog, setShowExitDialog] = useState(false);
+    const [latestBP, setLatestBP] = useState<any>(null);
+    const [latestBS, setLatestBS] = useState<any>(null);
+    const [latestKick, setLatestKick] = useState<any>(null);
 
     useEffect(() => {
-        const index = Math.floor(Math.random() * QUOTES.length);
-        setRandomQuote(QUOTES[index]);
-        setShowQuoteToast(true);
-
-        const timer = setTimeout(() => {
-            setShowQuoteToast(false);
-        }, 5000);
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
-        const saved = localStorage.getItem('water_intake_today');
-        const savedDate = localStorage.getItem('water_intake_date');
         const today = new Date().toDateString();
-        if (savedDate === today && saved) {
-            setWaterIntake(parseInt(saved, 10));
-        } else {
-            setWaterIntake(0);
-            localStorage.setItem('water_intake_today', '0');
-            localStorage.setItem('water_intake_date', today);
+        const lastShown = localStorage.getItem('last_quote_shown_date');
+        
+        if (lastShown !== today) {
+            const index = Math.floor(Math.random() * QUOTES.length);
+            setRandomQuote(QUOTES[index]);
+            setShowQuoteToast(true);
+            localStorage.setItem('last_quote_shown_date', today);
+
+            const timer = setTimeout(() => {
+                setShowQuoteToast(false);
+            }, 5000);
+
+            return () => clearTimeout(timer);
         }
     }, []);
 
-    const addWater = () => {
-        setWaterIntake(prev => {
-            const val = Math.min(prev + 250, 3000);
-            localStorage.setItem('water_intake_today', val.toString());
-            return val;
-        });
-    };
+
 
     useEffect(() => {
         const user = auth.currentUser;
@@ -114,13 +128,37 @@ export default function AdminDashboard() {
             setVisits(list);
         });
 
-        // 3. Lắng nghe Nhật ký dinh dưỡng gần nhất
-        const qFood = query(collection(db, "users", user.uid, "nutrition_diary"), orderBy("timestamp", "desc"), limit(1));
+        // 3. Lắng nghe bữa ăn gần nhất theo giờ ăn giống tab Nhật ký dinh dưỡng.
+        const qFood = query(collection(db, "users", user.uid, "nutrition_diary"), orderBy("datetime", "desc"), limit(20));
         const unsubFood = onSnapshot(qFood, (snapshot) => {
+            const list = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+            setLatestFood(pickLatestMeal(list));
+        });
+
+        // 4. Lắng nghe Giao dịch tài chính thai sản
+        const qFinance = query(collection(db, "users", user.uid, "maternity_finance"));
+        const unsubFinance = onSnapshot(qFinance, (snapshot) => {
+            const list = snapshot.docs.map(doc => doc.data());
+            setFinanceTxs(list);
+        });
+
+        // 5. Lắng nghe Vitals gần nhất (Huyết áp & Đường huyết)
+        const qVitals = query(collection(db, "users", user.uid, "health_vitals"), orderBy("datetime", "desc"));
+        const unsubVitals = onSnapshot(qVitals, (snapshot) => {
+            const list = snapshot.docs.map(doc => doc.data());
+            const bp = list.find(v => v.type === 'bp');
+            const bs = list.find(v => v.type === 'bs');
+            setLatestBP(bp || null);
+            setLatestBS(bs || null);
+        });
+
+        // 6. Lắng nghe Lịch sử đếm cử động thai gần nhất
+        const qKicks = query(collection(db, "users", user.uid, "baby_kicks"), orderBy("startTime", "desc"), limit(1));
+        const unsubKicks = onSnapshot(qKicks, (snapshot) => {
             if (!snapshot.empty) {
-                setLatestFood(snapshot.docs[0].data());
+                setLatestKick(snapshot.docs[0].data());
             } else {
-                setLatestFood(null);
+                setLatestKick(null);
             }
         });
 
@@ -128,6 +166,9 @@ export default function AdminDashboard() {
             unsubProfile();
             unsubVisits();
             unsubFood();
+            unsubFinance();
+            unsubVitals();
+            unsubKicks();
         };
     }, []);
 
@@ -150,11 +191,28 @@ export default function AdminDashboard() {
 
     const handleExitApp = () => {
         setShowExitDialog(false);
-        // Thử đóng tab (hoạt động khi mở từ PWA hoặc tab mới)
+        
+        // 1. Kiểm tra cầu nối Javascript (JS Bridge) phổ biến của Android WebView
+        const android = (window as any).Android || (window as any).AndroidInterface || (window as any).JSInterface;
+        if (android && typeof android.exitApp === 'function') {
+            android.exitApp();
+            return;
+        }
+        
+        // 2. Kiểm tra Cordova / PhoneGap app exit
+        const nav = navigator as any;
+        if (nav.app && typeof nav.app.exitApp === 'function') {
+            nav.app.exitApp();
+            return;
+        }
+
+        // 3. Thử đóng tab bằng window.close
         window.close();
-        // Fallback: về trang trắng nếu không đóng được
+
+        // 4. Nếu không phải môi trường app WebView/PWA mà chạy trên trình duyệt thường,
+        // quay về trang Landing chủ thay vì bị kẹt lại trang trắng about:blank
         setTimeout(() => {
-            window.location.href = 'about:blank';
+            window.location.href = '/';
         }, 200);
     };
 
@@ -181,9 +239,7 @@ export default function AdminDashboard() {
 
     const hasAllergy = profile.allergy && profile.allergy.toLowerCase() !== 'không';
 
-    // Logic hiển thị icon trên trang chủ: Lấy TẤT CẢ tiện ích trừ Home & Settings
-    const visibleUtils = MENU_DEFS.filter(i => i.id !== 'home' && i.id !== 'settings')
-        .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+
 
     // Hàm thêm vào lịch Google
     const addToCalendar = (dateStr: string, title: string, location: string) => {
@@ -321,18 +377,15 @@ export default function AdminDashboard() {
                     gap: 24px;
                     padding-bottom: 40px;
                 }
-                .db-left-col, .db-right-col {
+                .db-body-columns {
                     display: flex;
                     flex-direction: column;
                     gap: 24px;
                 }
-                /* override globals.css .card margin to align perfectly at the bottom */
-                .card.db-utils {
-                    margin-bottom: 0 !important;
-                }
-                /* Giữ icons căn từ đầu, không bị giãn đều khi card flex-grow */
-                .card.db-utils .utilities-grid {
-                    align-content: flex-start;
+                .db-left-col, .db-right-col {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 24px;
                 }
                 
                 @media (max-width: 1023px) {
@@ -342,12 +395,6 @@ export default function AdminDashboard() {
                     .db-left-col, .db-right-col {
                         display: contents;
                     }
-                    .db-hero { order: 1; }
-                    .vitals-grid { order: 2; }
-                    .baby-growth-card { order: 3; }
-                    .health-tracker-grid { order: 4; }
-                    .db-utils { order: 5; display: none !important; }
-                    .db-sos { order: 6; }
 
                     /* Tránh đè nút 3 gạch trôi nổi trên mobile */
                     .hero-welcome-text {
@@ -357,19 +404,41 @@ export default function AdminDashboard() {
 
                 /* 1. HERO PROFILE CARD */
                 .hero-profile { 
-                    background: linear-gradient(135deg, #fff5f7 0%, #f0f9ff 50%, #f5f3ff 100%); 
-                    border: 1px solid rgba(255, 255, 255, 0.7); 
-                    box-shadow: 0 12px 35px rgba(236, 72, 153, 0.06); 
-                    border-radius: 28px; 
+                    background:
+                        linear-gradient(135deg, #fff7fb 0%, #ffffff 46%, #fdf2f8 100%); 
+                    border: 1px solid rgba(251, 207, 232, 0.68); 
+                    box-shadow: 0 18px 42px rgba(236, 72, 153, 0.08); 
+                    border-radius: 32px; 
                     position: relative; 
                     overflow: hidden; 
-                    padding: 30px 24px; 
+                    padding: 32px 24px; 
+                }
+                .hero-profile::before {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    background-image:
+                        repeating-linear-gradient(45deg, transparent 0 18px, rgba(244, 114, 182, 0.08) 19px, transparent 21px),
+                        repeating-linear-gradient(-45deg, transparent 0 26px, rgba(251, 207, 232, 0.42) 27px, transparent 29px);
+                    opacity: 0.5;
+                    pointer-events: none;
+                }
+                .hero-profile::after {
+                    content: "✿";
+                    position: absolute;
+                    right: 22px;
+                    top: 18px;
+                    color: rgba(236, 72, 153, 0.13);
+                    font-size: 86px;
+                    line-height: 1;
+                    transform: rotate(-14deg);
+                    pointer-events: none;
                 }
                 .hero-bg-icon { 
                     position: absolute; 
                     top: -20px; 
                     right: -20px; 
-                    opacity: 0.12; 
+                    opacity: 0.05; 
                     color: #ec4899; 
                     animation: float-heart 6s ease-in-out infinite; 
                     pointer-events: none;
@@ -382,11 +451,11 @@ export default function AdminDashboard() {
                     z-index: 2;
                 }
                 .avatar-box { 
-                    width: 88px; 
-                    height: 88px; 
-                    border-radius: 24px; 
-                    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05); 
-                    border: 3px solid white; 
+                    width: 96px; 
+                    height: 96px; 
+                    border-radius: 32px; 
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06); 
+                    border: 4px solid #ffffff; 
                     background: #f8fafc; 
                     flex-shrink: 0; 
                     display: flex; 
@@ -418,75 +487,76 @@ export default function AdminDashboard() {
                     gap: 4px;
                 }
                 .greeting-text {
-                    font-size: 0.88rem;
+                    font-size: 0.95rem;
                     color: #64748b;
                     font-weight: 700;
                     letter-spacing: 0.3px;
                 }
                 .mother-name { 
-                    font-size: 1.5rem; 
+                    font-size: 1.65rem; 
                     font-weight: 900; 
-                    color: #1e293b; 
+                    color: #0f172a; 
                     line-height: 1.2; 
+                    letter-spacing: -0.5px;
                 }
                 .edd-text { 
-                    font-size: 0.88rem; 
+                    font-size: 0.95rem; 
                     color: #64748b; 
                     font-weight: 600; 
                 }
                 .edd-date { 
-                    color: #ec4899; 
+                    color: #0f172a; 
                     font-weight: 800; 
-                    background: #fff1f2;
-                    padding: 2px 8px;
-                    border-radius: 8px;
-                    border: 1px solid #ffe4e6;
+                    background: #f1f5f9;
+                    padding: 4px 10px;
+                    border-radius: 12px;
                 }
                 .allergy-badge { 
-                    background: #fee2e2; 
-                    color: #991b1b; 
-                    padding: 8px 14px; 
-                    border-radius: 14px; 
-                    font-size: 0.8rem; 
+                    background: #fef2f2; 
+                    color: #b91c1c; 
+                    padding: 10px 16px; 
+                    border-radius: 20px; 
+                    font-size: 0.85rem; 
                     font-weight: 700; 
                     margin-top: 18px; 
                     display: flex; 
                     align-items: center; 
-                    gap: 6px; 
+                    gap: 8px; 
                     position: relative; 
                     z-index: 2; 
-                    border: 1px solid #fecaca;
+                    border: 1px solid #fee2e2;
                     align-self: flex-start;
                 }
 
                 /* Timeline progress design */
                 .pregnancy-timeline-container {
-                    margin-top: 24px;
+                    margin-top: 28px;
                     position: relative;
                     z-index: 2;
-                    background: rgba(255, 255, 255, 0.4);
-                    border: 1px solid rgba(255, 255, 255, 0.5);
-                    padding: 16px;
-                    border-radius: 18px;
+                    background: rgba(255, 255, 255, 0.66);
+                    padding: 20px;
+                    border-radius: 24px;
+                    border: 1px solid rgba(251, 207, 232, 0.5);
+                    box-shadow: 0 10px 24px rgba(236, 72, 153, 0.06);
                 }
                 .timeline-header {
                     display: flex;
                     justify-content: space-between;
-                    font-size: 0.82rem;
+                    font-size: 0.9rem;
                     color: #475569;
-                    margin-bottom: 8px;
-                    font-weight: 600;
+                    margin-bottom: 12px;
+                    font-weight: 700;
                 }
                 .timeline-header strong {
-                    color: #ec4899;
-                    font-weight: 700;
+                    color: #0f172a;
+                    font-size: 1.05rem;
                 }
                 .percent-text {
-                    color: #8b5cf6;
-                    font-weight: 700;
+                    color: #0ea5e9;
+                    font-weight: 800;
                 }
                 .timeline-track {
-                    height: 10px;
+                    height: 12px;
                     background: #e2e8f0;
                     border-radius: 999px;
                     overflow: hidden;
@@ -494,17 +564,17 @@ export default function AdminDashboard() {
                 }
                 .timeline-fill {
                     height: 100%;
-                    background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 100%);
+                    background: #0ea5e9;
                     border-radius: 999px;
                     transition: width 1s ease-out;
                 }
                 .timeline-labels {
                     display: flex;
                     justify-content: space-between;
-                    font-size: 0.7rem;
+                    font-size: 0.8rem;
                     color: #94a3b8;
-                    margin-top: 6px;
-                    font-weight: 700;
+                    margin-top: 8px;
+                    font-weight: 800;
                     text-transform: uppercase;
                 }
 
@@ -521,163 +591,155 @@ export default function AdminDashboard() {
                     gap: 16px;
                 }
                 .vital-box { 
-                    background: rgba(255, 255, 255, 0.8); 
-                    backdrop-filter: blur(10px); 
-                    border-radius: 20px; 
-                    padding: 16px 12px; 
+                    background: #f8fafc; 
+                    border-radius: 24px; 
+                    padding: 20px 12px; 
                     text-align: center; 
-                    border: 1px solid rgba(255, 255, 255, 0.7); 
-                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+                    border: 1px solid transparent; 
+                    box-shadow: none;
                     transition: all 0.3s ease;
                     min-width: 0;
                 }
                 .vital-box:hover {
-                    transform: translateY(-3px);
-                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+                    transform: translateY(-2px);
+                    background: #ffffff;
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.04);
+                    border-color: #f1f5f9;
                 }
                 .vital-label { 
-                    font-size: 0.7rem; 
+                    font-size: 0.75rem; 
                     color: #64748b; 
-                    font-weight: 600; 
+                    font-weight: 700; 
                     text-transform: uppercase; 
                     letter-spacing: 0.5px;
-                    margin-bottom: 6px;
+                    margin-bottom: 8px;
                 }
                 .vital-value { 
-                    font-size: 1.15rem; 
-                    font-weight: 500; 
+                    font-size: 1.35rem; 
+                    font-weight: 800; 
                     line-height: 1.25; 
+                    letter-spacing: -0.5px;
                 }
-                .vital-box.pink { background: #fff5f7; border-color: #ffe4e6; }
-                .vital-box.yellow { background: #fffbeb; border-color: #fef3c7; }
-                .vital-box.blue { background: #f0f9ff; border-color: #e0f2fe; }
-                .vital-box.red { background: #fef2f2; border-color: #fee2e2; }
-                .vital-box.pink .vital-value { color: #ec4899; }
-                .vital-box.yellow .vital-value { color: #d97706; }
-                .vital-box.blue .vital-value { color: #0ea5e9; }
-                .vital-box.red .vital-value { color: #ef4444; }
+                .vital-box.pink { background: #fff1f2; }
+                .vital-box.yellow { background: #fffbeb; }
+                .vital-box.blue { background: #f0f9ff; }
+                .vital-box.red { background: #fef2f2; }
+                .vital-box.pink .vital-value { color: #be185d; }
+                .vital-box.yellow .vital-value { color: #b45309; }
+                .vital-box.blue .vital-value { color: #0369a1; }
+                .vital-box.red .vital-value { color: #b91c1c; }
 
                 /* 3. BABY & MOM ADVICE BOX */
                 .baby-growth-card {
                     background: white;
-                    border-radius: 24px;
-                    border: 1px solid #f1f5f9;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
-                    padding: 24px;
+                    border-radius: 32px;
+                    border: 1px solid rgba(226, 232, 240, 0.6);
+                    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.04);
+                    padding: 28px;
                     position: relative;
                     overflow: hidden;
-                }
-                .baby-growth-card::before {
-                    content: '';
-                    position: absolute;
-                    top: 0; left: 0; right: 0; height: 4px;
-                    background: linear-gradient(90deg, #ec4899, #8b5cf6);
                 }
                 .growth-header {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
-                    margin-bottom: 18px;
-                    border-bottom: 1px solid #f1f5f9;
-                    padding-bottom: 12px;
+                    gap: 12px;
+                    margin-bottom: 24px;
                 }
                 .spinning-flower {
-                    color: #ec4899;
-                    font-size: 1.4rem;
-                    animation: pulse-icon 3s ease-in-out infinite;
+                    color: #0ea5e9;
+                    font-size: 1.6rem;
                 }
                 .growth-header h4 {
                     margin: 0;
-                    font-size: 1.05rem;
-                    font-weight: 700;
-                    color: #1e293b;
+                    font-size: 1.25rem;
+                    font-weight: 800;
+                    color: #0f172a;
+                    letter-spacing: -0.3px;
                 }
                 .growth-body {
                     display: flex;
                     flex-direction: column;
-                    gap: 14px;
+                    gap: 16px;
                 }
                 .info-sec {
                     display: flex;
                     flex-direction: column;
-                    gap: 4px;
+                    gap: 6px;
                 }
                 .sec-title {
-                    font-size: 0.82rem;
-                    font-weight: 700;
+                    font-size: 0.85rem;
+                    font-weight: 800;
                     color: #475569;
                     text-transform: uppercase;
                     letter-spacing: 0.3px;
                 }
                 .sec-content {
-                    font-size: 0.9rem;
-                    color: #475569;
-                    line-height: 1.55;
+                    font-size: 0.95rem;
+                    color: #334155;
+                    line-height: 1.6;
                     margin: 0;
                 }
                 .info-sec.advice {
-                    background: #fdf4ff;
-                    border: 1px dashed #fbcfe8;
-                    padding: 12px 16px;
-                    border-radius: 16px;
+                    background: #f0fdfa;
+                    padding: 16px 20px;
+                    border-radius: 20px;
                 }
                 .info-sec.advice .sec-title {
-                    color: #c084fc;
+                    color: #0d9488;
                 }
                 .info-sec.advice .sec-content {
-                    color: #6b21a8;
+                    color: #0f766e;
                     font-weight: 500;
                 }
 
-                /* 4. HEALTH TRACKER GRID */
-                .health-card.health-tracker-grid {
-                    display: grid;
-                    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-                    gap: 20px 28px;
-                }
-                .health-card.health-tracker-grid h3 {
-                    grid-column: span 2;
-                }
                 .health-card {
                     background: white;
-                    border-radius: 24px;
-                    border: 1px solid #f1f5f9;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.02);
-                    padding: 20px;
+                    border-radius: 32px;
+                    border: 1px solid rgba(226, 232, 240, 0.6);
+                    box-shadow: 0 16px 40px rgba(0,0,0,0.04);
+                    padding: 28px;
                     display: flex;
                     flex-direction: column;
-                    gap: 16px;
+                    gap: 20px;
                     min-width: 0;
+                }
+                /* 4. HEALTH TRACKER GRID - must come after .health-card base */
+                .health-card.health-tracker-grid {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr);
+                    gap: 24px;
+                }
+                .health-card.health-tracker-grid h3 {
+                    grid-column: span 1;
                 }
                 .health-card-title {
                     margin: 0;
-                    font-size: 1.05rem;
-                    color: #334155;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    font-weight: 700;
-                }
-                .cost-wallet-card {
-                    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-                    border: 1px solid #bbf7d0;
-                    padding: 16px;
-                    border-radius: 18px;
+                    font-size: 1.25rem;
+                    color: #0f172a;
                     display: flex;
                     align-items: center;
                     gap: 12px;
+                    font-weight: 800;
+                    letter-spacing: -0.3px;
+                }
+                .cost-wallet-card {
+                    background: #f0fdf4;
+                    padding: 20px;
+                    border-radius: 24px;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
                 }
                 .wallet-icon {
-                    width: 44px;
-                    height: 44px;
-                    border-radius: 14px;
+                    width: 52px;
+                    height: 52px;
+                    border-radius: 18px;
                     background: white;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     color: #16a34a;
-                    box-shadow: 0 4px 10px rgba(22, 163, 74, 0.1);
-                    font-size: 1.3rem;
+                    font-size: 1.5rem;
                     flex-shrink: 0;
                 }
                 .wallet-info {
@@ -686,13 +748,13 @@ export default function AdminDashboard() {
                     min-width: 0;
                 }
                 .wallet-info span {
-                    font-size: 0.72rem;
+                    font-size: 0.75rem;
                     color: #15803d;
-                    font-weight: 600;
+                    font-weight: 700;
                     text-transform: uppercase;
                 }
                 .wallet-info strong {
-                    font-size: 1.05rem;
+                    font-size: 1.25rem;
                     font-weight: 800;
                     color: #14532d;
                     margin-top: 2px;
@@ -703,39 +765,36 @@ export default function AdminDashboard() {
 
                 /* Calendar Block UI */
                 .calendar-block-appt {
-                    background: linear-gradient(135deg, #fff5f7 0%, #ffe4e6 100%);
-                    border: 1px solid #fecaca;
-                    border-radius: 18px;
-                    padding: 16px;
+                    background: #fff1f2;
+                    border-radius: 24px;
+                    padding: 20px;
                     display: flex;
-                    gap: 14px;
+                    gap: 16px;
                     align-items: center;
                     position: relative;
                 }
                 .mini-calendar-sheet {
-                    width: 52px;
-                    height: 58px;
+                    width: 56px;
+                    height: 64px;
                     background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 10px rgba(225, 29, 72, 0.08);
+                    border-radius: 16px;
                     overflow: hidden;
                     display: flex;
                     flex-direction: column;
-                    border: 1px solid #fecaca;
                     flex-shrink: 0;
                     text-align: center;
                 }
                 .calendar-sheet-header {
                     background: #e11d48;
                     color: white;
-                    font-size: 0.55rem;
+                    font-size: 0.6rem;
                     font-weight: 800;
-                    padding: 3px 0;
+                    padding: 4px 0;
                     text-transform: uppercase;
-                    letter-spacing: 0.3px;
+                    letter-spacing: 0.5px;
                 }
                 .calendar-sheet-day {
-                    font-size: 1.3rem;
+                    font-size: 1.4rem;
                     font-weight: 900;
                     color: #9f1239;
                     flex: 1;
@@ -749,110 +808,107 @@ export default function AdminDashboard() {
                     min-width: 0;
                     display: flex;
                     flex-direction: column;
-                    gap: 2px;
-                    padding-right: 24px;
+                    gap: 4px;
+                    padding-right: 28px;
                 }
                 .appt-title {
-                    font-size: 0.72rem;
+                    font-size: 0.75rem;
                     color: #9f1239;
-                    font-weight: 700;
+                    font-weight: 800;
                     text-transform: uppercase;
                 }
                 .appt-time {
-                    font-size: 0.85rem;
+                    font-size: 0.95rem;
                     font-weight: 800;
-                    color: #475569;
+                    color: #0f172a;
                 }
                 .appt-clinic {
-                    font-size: 0.75rem;
-                    color: #64748b;
+                    font-size: 0.85rem;
+                    color: #475569;
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
                 }
                 .btn-add-gcal {
                     position: absolute;
-                    top: 12px;
-                    right: 12px;
+                    top: 16px;
+                    right: 16px;
                     border: none; 
                     background: white; 
                     display: flex; 
                     align-items: center; 
                     justify-content: center; 
-                    width: 24px;
-                    height: 24px;
+                    width: 32px;
+                    height: 32px;
                     border-radius: 50%; 
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.06); 
                     cursor: pointer;
                     transition: transform 0.2s;
                 }
                 .btn-add-gcal:hover {
-                    transform: scale(1.1) rotate(15deg);
+                    transform: scale(1.1);
                 }
 
                 /* Nutrition Tracker Card */
                 .nutrition-latest-box {
-                    background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 100%);
-                    border: 1px solid #fed7aa;
-                    padding: 16px;
-                    border-radius: 18px;
+                    background: #fffbeb;
+                    padding: 20px;
+                    border-radius: 24px;
                     display: flex;
                     align-items: center;
-                    gap: 12px;
+                    gap: 16px;
                     position: relative;
                 }
                 .nutrition-icon {
-                    width: 44px;
-                    height: 44px;
-                    border-radius: 14px;
+                    width: 52px;
+                    height: 52px;
+                    border-radius: 18px;
                     background: white;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    box-shadow: 0 4px 10px rgba(249, 115, 22, 0.1);
-                    font-size: 1.3rem;
+                    font-size: 1.5rem;
                     flex-shrink: 0;
                 }
                 .nutrition-details {
                     display: flex;
                     flex-direction: column;
                     min-width: 0;
+                    padding-right: 48px;
                 }
                 .nutrition-title {
-                    font-size: 0.72rem;
-                    color: #c2410c;
-                    font-weight: 500;
+                    font-size: 0.75rem;
+                    color: #b45309;
+                    font-weight: 700;
                     text-transform: uppercase;
                 }
                 .nutrition-content {
-                    font-size: 0.9rem;
-                    font-weight: 400;
+                    font-size: 1rem;
+                    font-weight: 600;
                     color: #7c2d12;
-                    margin-top: 2px;
+                    margin-top: 4px;
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
                 }
                 .nutrition-meta {
-                    font-size: 0.75rem;
+                    font-size: 0.85rem;
                     color: #d97706;
                     font-weight: 600;
-                    margin-top: 2px;
+                    margin-top: 4px;
                 }
                 .btn-quick-add {
                     position: absolute;
-                    right: 16px;
+                    right: 20px;
                     top: 50%;
                     transform: translateY(-50%);
                     background: white;
-                    width: 36px;
-                    height: 36px;
+                    width: 40px;
+                    height: 40px;
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     color: #f97316;
-                    box-shadow: 0 4px 10px rgba(249, 115, 22, 0.15);
                     cursor: pointer;
                     transition: all 0.2s;
                 }
@@ -862,78 +918,19 @@ export default function AdminDashboard() {
                     color: white;
                 }
 
-                /* 5. APP UTILITIES GRID WITH GLOW EFFECT */
-                .utilities-grid { 
-                    display: grid; 
-                    grid-template-columns: repeat(4, minmax(0, 1fr)); 
-                    gap: 20px 16px; 
-                    margin-top: 12px; 
-                    flex-grow: 1;
-                }
-                .util-item { 
-                    display: flex; 
-                    flex-direction: column; 
-                    align-items: center; 
-                    justify-content: center;
-                    text-decoration: none; 
-                    cursor: pointer; 
-                    background: rgba(248, 250, 252, 0.45);
-                    border: 1px solid rgba(241, 245, 249, 0.75);
-                    padding: 22px 8px;
-                    border-radius: 24px;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    min-width: 0;
-                }
-                .util-item:hover { 
-                    transform: translateY(-4px); 
-                    background: white;
-                }
-                .util-icon-box { 
-                    width: 52px; 
-                    height: 52px; 
-                    border-radius: 16px; 
-                    display: flex; 
-                    align-items: center; 
-                    justify-content: center; 
-                    margin-bottom: 10px; 
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.02); 
-                    background: white; 
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    font-size: 24px;
-                }
-                .util-item:hover .util-icon-box {
-                    transform: scale(1.1) rotate(3deg);
-                }
-                .util-label { 
-                    font-size: 0.8rem; 
-                    font-weight: 400; 
-                    color: #475569; 
-                    text-align: center; 
-                    line-height: 1.25; 
-                }
 
-                /* Specific Hover Colors & Shadows */
-                .util-item.util-sokham:hover { border-color: rgba(16, 185, 129, 0.3); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.08); }
-                .util-item.util-lichkham:hover { border-color: rgba(59, 130, 246, 0.3); box-shadow: 0 10px 20px rgba(59, 130, 246, 0.08); }
-                .util-item.util-dinhduong:hover { border-color: rgba(249, 115, 22, 0.3); box-shadow: 0 10px 20px rgba(249, 115, 22, 0.08); }
-                .util-item.util-album:hover { border-color: rgba(139, 92, 246, 0.3); box-shadow: 0 10px 20px rgba(139, 92, 246, 0.08); }
-                .util-item.util-chuanbi:hover { border-color: rgba(245, 158, 11, 0.3); box-shadow: 0 10px 20px rgba(245, 158, 11, 0.08); }
-                .util-item.util-note:hover { border-color: rgba(20, 184, 166, 0.3); box-shadow: 0 10px 20px rgba(20, 184, 166, 0.08); }
-                .util-item.util-thaigiao:hover { border-color: rgba(219, 39, 119, 0.3); box-shadow: 0 10px 20px rgba(219, 39, 119, 0.08); }
-                .util-item.util-kiengky:hover { border-color: rgba(239, 68, 68, 0.3); box-shadow: 0 10px 20px rgba(239, 68, 68, 0.08); }
 
                 /* 6. SOS EMERGENCY */
                 .btn-sos { 
-                    background: linear-gradient(135deg, #ef4444, #dc2626); 
+                    background: #ef4444; 
                     color: white; 
-                    padding: 16px 20px; 
-                    border-radius: 20px; 
+                    padding: 20px 24px; 
+                    border-radius: 24px; 
                     text-decoration: none; 
                     display: flex; 
                     align-items: center; 
                     justify-content: space-between; 
                     animation: pulse-sos 2.5s infinite;
-                    border: 1px solid rgba(255,255,255,0.1);
                     transition: transform 0.2s;
                 }
                 .btn-sos:hover {
@@ -952,29 +949,44 @@ export default function AdminDashboard() {
 
                 /* Responsive design */
                 @media (max-width: 900px) {
-                    .health-card.health-tracker-grid {
-                        grid-template-columns: minmax(0, 1fr);
-                        gap: 24px;
-                    }
-                    .health-card.health-tracker-grid h3 {
-                        grid-column: span 1;
-                    }
                     .vitals-grid-inner { 
                         grid-template-columns: repeat(2, minmax(0, 1fr)); 
                         gap: 12px; 
                     }
                 }
-                @media (max-width: 600px) {
-                    .utilities-grid { 
-                        grid-template-columns: repeat(3, minmax(0, 1fr)); 
-                        gap: 12px;
-                    }
-                }
+
             `}</style>
+
+            {/* Warning Banner for Preeclampsia BP */}
+            {latestBP && (latestBP.systolic >= 140 || latestBP.diastolic >= 90) && (
+                <div style={{
+                    background: 'linear-gradient(135deg, #be185d 0%, #ef4444 100%)',
+                    color: 'white',
+                    padding: '16px 20px',
+                    borderRadius: '24px',
+                    marginBottom: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    boxShadow: '0 10px 25px rgba(239, 68, 68, 0.15)',
+                    animation: 'pulse-sos 2.5s infinite'
+                }}>
+                    <IoWarningOutline size={28} style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                        <strong style={{ display: 'block', fontSize: '0.9rem', marginBottom: '2px' }}>🚨 Cảnh báo Huyết áp cao!</strong>
+                        <span style={{ fontSize: '0.8rem', opacity: 0.95, lineHeight: 1.45, display: 'block' }}>
+                            Chỉ số huyết áp gần nhất đo lúc {latestBP.datetime.replace('T', ' ')} là <strong>{latestBP.systolic}/{latestBP.diastolic} mmHg</strong>. Đây là mức nguy cơ Tiền Sản Giật. Vui lòng nghỉ ngơi và liên hệ ngay với người thân hoặc bác sĩ khám thai!
+                        </span>
+                    </div>
+                    <Link href="/admin/canh-bao" style={{ background: 'white', color: '#b91c1c', padding: '8px 16px', borderRadius: '12px', fontSize: '0.78rem', fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                        Xem liên hệ
+                    </Link>
+                </div>
+            )}
 
             <div className="dashboard-flex-layout">
                 {/* 1. HỒ SƠ MẸ BẦU (HERO CARD) */}
-                <div className="hero-profile fade-in db-hero" style={{ padding: '20px', borderRadius: '24px' }}>
+                <div className="hero-profile fade-in db-hero">
                     
                     <div className="hero-top-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', width: '100%' }}>
                         <div className="hero-welcome-text" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -1000,30 +1012,55 @@ export default function AdminDashboard() {
                             </div>
                             
                             {/* Nút gọi khẩn cấp gọn gàng gần avatar */}
-                            {profile.phoneHusband && (
-                                <a href={`tel:${profile.phoneHusband}`} style={{
+                            {/* Nút gọi khẩn cấp & cảnh báo đỏ gọn gàng */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                                {profile.phoneHusband && (
+                                    <a href={`tel:${profile.phoneHusband}`} style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                        background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)', 
+                                        color: '#e11d48', padding: '6px 14px 6px 8px',
+                                        borderRadius: '999px', fontSize: '0.82rem', fontWeight: 800,
+                                        border: '1px solid #fecdd3', width: 'fit-content',
+                                        textDecoration: 'none',
+                                        boxShadow: '0 4px 10px rgba(225, 29, 72, 0.1)',
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                    onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                    >
+                                        <div style={{
+                                            background: '#e11d48', color: 'white', 
+                                            width: '26px', height: '26px', borderRadius: '50%', 
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                        }}>
+                                            <IoCall size={14} style={{ animation: 'pulse-icon 2s infinite' }} />
+                                        </div>
+                                        Gọi chồng
+                                    </a>
+                                )}
+                                <Link href="/admin/canh-bao" style={{
                                     display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                    background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)', 
-                                    color: '#e11d48', padding: '6px 14px 6px 8px',
+                                    background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)', 
+                                    color: '#dc2626', padding: '6px 14px 6px 8px',
                                     borderRadius: '999px', fontSize: '0.82rem', fontWeight: 800,
                                     border: '1px solid #fecdd3', width: 'fit-content',
-                                    marginTop: '8px', textDecoration: 'none',
-                                    boxShadow: '0 4px 10px rgba(225, 29, 72, 0.1)',
+                                    textDecoration: 'none',
+                                    boxShadow: '0 4px 10px rgba(220, 38, 38, 0.1)',
                                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                                 }}
                                 onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                                 onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                                 >
                                     <div style={{
-                                        background: '#e11d48', color: 'white', 
+                                        background: '#dc2626', color: 'white', 
                                         width: '26px', height: '26px', borderRadius: '50%', 
                                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                                     }}>
-                                        <IoCall size={14} style={{ animation: 'pulse-icon 2s infinite' }} />
+                                        <IoWarningOutline size={14} />
                                     </div>
-                                    Gọi chồng
-                                </a>
-                            )}
+                                    Cảnh báo đỏ
+                                </Link>
+                            </div>
                         </div>
                         
                         {/* Khung chứa ảnh đại diện kèm họa tiết bông hoa ôm quanh */}
@@ -1043,15 +1080,8 @@ export default function AdminDashboard() {
                             <div 
                                 className="avatar-box" 
                                 style={{ 
-                                    width: '96px', 
-                                    height: '96px', 
-                                    borderRadius: '50%', 
-                                    border: '3px solid white', 
-                                    boxShadow: '0 8px 20px rgba(0,0,0,0.08)', 
-                                    overflow: 'hidden', 
                                     position: 'relative',
-                                    zIndex: 2,
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                    zIndex: 2
                                 }}
                                 onMouseOver={(e) => {
                                     if (profile.avatar) e.currentTarget.style.transform = 'scale(1.05)';
@@ -1086,6 +1116,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
+                <div className="db-body-columns">
                 <div className="db-left-col">
                     {/* 2. CHỈ SỐ THAI KỲ - VITALS CARD */}
                     <div className="health-card vitals-grid">
@@ -1127,47 +1158,61 @@ export default function AdminDashboard() {
 
                         {/* THẺ LỊCH KHÁM THAI */}
                         <div className="db-visits" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <IoMedkitOutline style={{ color: '#ec4899' }} size={18} />
-                                Khám thai & Chi phí
-                            </h4>
-                            
-                            <div className="cost-wallet-card">
-                                <div className="wallet-icon">
-                                    <IoWalletOutline />
+                            <Link href="/admin/sokhambenh" style={{ textDecoration: 'none', display: 'block' }}>
+                                <div className="cost-wallet-card" style={{ transition: 'transform 0.2s', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                                    <div className="wallet-icon">
+                                        <IoWalletOutline />
+                                    </div>
+                                    <div className="wallet-info">
+                                        <span>Tổng chi phí đã chi</span>
+                                        <strong>{formatVND(totalCost)}</strong>
+                                    </div>
                                 </div>
-                                <div className="wallet-info">
-                                    <span>Tổng chi phí đã chi</span>
-                                    <strong>{formatVND(totalCost)}</strong>
-                                </div>
-                            </div>
+                            </Link>
                             
+                            <Link href="/admin/tai-chinh" style={{ textDecoration: 'none', display: 'block' }}>
+                                <div className="cost-wallet-card" style={{ marginTop: '-4px', background: 'linear-gradient(135deg, #fffbeb 0%, #ffedd5 100%)', border: '1px solid #fed7aa', transition: 'transform 0.2s', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                                    <div className="wallet-icon" style={{ background: 'linear-gradient(135deg, #ea580c 0%, #ca8a04 100%)', color: 'white', boxShadow: '0 4px 10px rgba(234, 88, 12, 0.2)' }}>
+                                        <IoWalletOutline />
+                                    </div>
+                                    <div className="wallet-info">
+                                        <span style={{ color: '#b45309' }}>Tổng chi tiêu sắm đồ</span>
+                                        <strong style={{ color: '#9a3412', fontSize: '1.15rem' }}>
+                                            {formatVND(financeTxs.filter(t => t.type !== 'income').reduce((sum, t) => sum + (Number(t.amount) || 0), 0))}
+                                        </strong>
+                                    </div>
+                                </div>
+                            </Link>
+
                             {nextAppt ? (
-                                <div className="calendar-block-appt">
-                                    <div className="mini-calendar-sheet">
-                                        <div className="calendar-sheet-header">Lịch Hẹn</div>
-                                        <div className="calendar-sheet-day">
-                                            {new Date(nextAppt.nextDate).getDate()}
+                                <Link href="/admin/sokhambenh" style={{ textDecoration: 'none', display: 'block' }}>
+                                    <div className="calendar-block-appt" style={{ transition: 'transform 0.2s', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                                        <div className="mini-calendar-sheet">
+                                            <div className="calendar-sheet-header">Lịch Hẹn</div>
+                                            <div className="calendar-sheet-day">
+                                                {new Date(nextAppt.nextDate).getDate()}
+                                            </div>
                                         </div>
+                                        <div className="appt-details">
+                                            <span className="appt-title">Khám thai tiếp theo</span>
+                                            <span className="appt-time">
+                                                Ngày {nextAppt.nextDate.split('-')[2]}/{nextAppt.nextDate.split('-')[1]}/{nextAppt.nextDate.split('-')[0]}
+                                            </span>
+                                            <span className="appt-clinic">{nextAppt.clinicName}</span>
+                                        </div>
+                                        <button 
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCalendar(nextAppt.nextDate, `Khám thai tại ${nextAppt.clinicName}`, nextAppt.clinicName); }}
+                                            className="btn-add-gcal"
+                                            title="Thêm vào Google Lịch"
+                                        >
+                                            <IoLogoGoogle size={14} color="#ec4899" />
+                                        </button>
                                     </div>
-                                    <div className="appt-details">
-                                        <span className="appt-title">Khám thai tiếp theo</span>
-                                        <span className="appt-time">
-                                            Ngày {nextAppt.nextDate.split('-')[2]}/{nextAppt.nextDate.split('-')[1]}/{nextAppt.nextDate.split('-')[0]}
-                                        </span>
-                                        <span className="appt-clinic">{nextAppt.clinicName}</span>
-                                    </div>
-                                    <button 
-                                        onClick={() => addToCalendar(nextAppt.nextDate, `Khám thai tại ${nextAppt.clinicName}`, nextAppt.clinicName)}
-                                        className="btn-add-gcal"
-                                        title="Thêm vào Google Lịch"
-                                    >
-                                        <IoLogoGoogle size={14} color="#ec4899" />
-                                    </button>
-                                </div>
+                                </Link>
                             ) : (
                                 <Link 
                                     href="/admin/sokhambenh?action=add" 
+                                    replace 
                                     style={{ 
                                         background: 'rgba(16, 185, 129, 0.04)', 
                                         padding: '16px', 
@@ -1188,13 +1233,9 @@ export default function AdminDashboard() {
                             )}
                         </div>
 
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         {/* THẺ DINH DƯỠNG */}
                         <div className="db-nutrition" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <IoRestaurantOutline style={{ color: '#f97316' }} size={18} />
-                                Dinh dưỡng mỗi ngày
-                            </h4>
-                            
                             {latestFood ? (
                                 <div className="nutrition-latest-box">
                                     <div className="nutrition-icon">
@@ -1207,13 +1248,14 @@ export default function AdminDashboard() {
                                             {latestFood.calories || 0} kcal • {latestFood.datetime ? latestFood.datetime.split('T')[1]?.substring(0, 5) : ''}
                                         </span>
                                     </div>
-                                    <Link href="/admin/dinh-duong?tab=diary" className="btn-quick-add" title="Xem nhật ký ăn uống">
+                                    <Link href="/admin/dinh-duong?tab=diary" replace className="btn-quick-add" title="Xem nhật ký ăn uống">
                                         <IoAddOutline size={20} />
                                     </Link>
                                 </div>
                             ) : (
                                 <Link 
                                     href="/admin/dinh-duong?tab=diary"
+                                    replace
                                     style={{ 
                                         background: 'rgba(249, 115, 22, 0.04)', 
                                         padding: '16px', 
@@ -1232,76 +1274,44 @@ export default function AdminDashboard() {
                                     <span style={{ fontSize: '0.8rem', color: '#f97316', fontWeight: 800 }}>Ghi nhận bữa ăn mới</span>
                                 </Link>
                             )}
+                        </div>
 
-                            {/* NƯỚC UỐNG HÀNG NGÀY */}
-                            <div style={{
-                                background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                                border: '1px solid #bae6fd',
-                                padding: '14px 16px',
-                                borderRadius: '18px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                position: 'relative'
-                            }}>
-                                <div style={{
-                                    width: '44px',
-                                    height: '44px',
-                                    borderRadius: '14px',
-                                    background: 'white',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#0284c7',
-                                    boxShadow: '0 4px 10px rgba(2, 132, 199, 0.1)',
-                                    fontSize: '1.3rem',
-                                    flexShrink: 0
-                                }}>
-                                    <IoWaterOutline />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gap: '4px' }}>
-                                    <span style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: 500, textTransform: 'uppercase' }}>Theo dõi nước uống</span>
-                                    <strong style={{ fontSize: '0.9rem', color: '#0c4a6e', fontWeight: 400 }}>Đã uống: {waterIntake}/2000 ml</strong>
-                                    <div style={{ width: '100%', height: '6px', background: 'white', borderRadius: '99px', overflow: 'hidden', border: '1px solid #bae6fd' }}>
-                                        <div style={{ width: `${Math.min((waterIntake / 2000) * 100, 100)}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8 0%, #0284c7 100%)', borderRadius: '99px', transition: 'width 0.4s ease' }} />
+                        {/* THẺ HUYẾT ÁP & ĐƯỜNG HUYẾT */}
+                        <div className="db-vitals-log" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            
+
+                            <Link href="/admin/suc-khoe" style={{ textDecoration: 'none', display: 'block' }}>
+                                <div className="cost-wallet-card" style={{ background: 'linear-gradient(135deg, #ecfeff 0%, #cffafe 100%)', border: '1px solid #a5f3fc', transition: 'transform 0.2s', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                                    <div className="wallet-icon" style={{ background: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)', color: 'white', boxShadow: '0 4px 10px rgba(6, 182, 212, 0.2)' }}>
+                                        <IoPulseOutline />
+                                    </div>
+                                    <div className="wallet-info">
+                                        <span style={{ color: '#0891b2' }}>Huyết áp gần nhất</span>
+                                        <strong style={{ color: '#0f766e', fontSize: '1.05rem' }}>
+                                            {latestBP ? `${latestBP.systolic}/${latestBP.diastolic} mmHg` : 'Chưa ghi nhận'}
+                                        </strong>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={addWater}
-                                    style={{
-                                        border: 'none',
-                                        background: 'white',
-                                        width: '32px',
-                                        height: '32px',
-                                        borderRadius: '50%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: '#0284c7',
-                                        boxShadow: '0 4px 10px rgba(2, 132, 199, 0.15)',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        fontWeight: 800,
-                                        fontSize: '0.8rem',
-                                        flexShrink: 0
-                                    }}
-                                    onMouseOver={(e) => {
-                                        e.currentTarget.style.background = '#0284c7';
-                                        e.currentTarget.style.color = 'white';
-                                    }}
-                                    onMouseOut={(e) => {
-                                        e.currentTarget.style.background = 'white';
-                                        e.currentTarget.style.color = '#0284c7';
-                                    }}
-                                >
-                                    +
-                                </button>
-                            </div>
+                            </Link>
+
+                            <Link href="/admin/suc-khoe" style={{ textDecoration: 'none', display: 'block' }}>
+                                <div className="cost-wallet-card" style={{ marginTop: '-4px', background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '1px solid #bbf7d0', transition: 'transform 0.2s', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                                    <div className="wallet-icon" style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: 'white', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)' }}>
+                                        <IoSparklesOutline />
+                                    </div>
+                                    <div className="wallet-info">
+                                        <span style={{ color: '#059669' }}>Đường huyết gần nhất</span>
+                                        <strong style={{ color: '#14532d', fontSize: '1.05rem' }}>
+                                            {latestBS ? `${latestBS.bloodSugar} mmol/L` : 'Chưa ghi nhận'}
+                                        </strong>
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
                         </div>
                     </div>
 
-                    {/* Nút SOS đã được dời lên phần Hero Profile */}
-                </div>
+                </div>{/* end db-left-col */}
 
                 <div className="db-right-col">
                     {/* 3. THÔNG TIN PHÁT TRIỂN CỦA BÉ HẰNG TUẦN */}
@@ -1334,37 +1344,17 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* 5. TIỆN ÍCH & ỨNG DỤNG GRID */}
-                    <div className="card db-utils" style={{ display: 'flex', flexDirection: 'column' }}>
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1.05rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800 }}>
-                            <IoAppsOutline style={{ color: '#6366f1' }} /> Các ứng dụng thai kỳ
-                        </h3>
-                        <div className="utilities-grid">
-                            {visibleUtils.map(item => (
-                                <Link 
-                                    href={item.target} 
-                                    key={item.id} 
-                                    className={`util-item util-${item.id}`}
-                                >
-                                    <div className="util-icon-box" style={{ color: item.color, background: `${item.color}12` }}>
-                                        {item.id === 'sokham' && <IoClipboardOutline />}
-                                        {item.id === 'lichkham' && <IoCalendarOutline />}
-                                        {item.id === 'dinhduong' && <IoRestaurantOutline />}
-                                        {item.id === 'album' && <IoImagesOutline />}
-                                        {item.id === 'chuanbi' && <IoBriefcaseOutline />}
-                                        {item.id === 'note' && <IoBookOutline />}
-                                        {item.id === 'thaigiao' && <IoMusicalNotesOutline />}
-                                        {item.id === 'kiengky' && <IoShieldHalfOutline />}
-                                    </div>
-                                    <span className="util-label">{item.label}</span>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+
+
+
+
+
+                </div>{/* end db-right-col */}
+                </div>{/* end db-body-columns */}
             </div>
 
         </div>
+
 
         {/* ===== EXIT APP CONFIRMATION DIALOG ===== */}
         {showExitDialog && (

@@ -187,36 +187,60 @@
 
     /* 2. Responsive Dashboard Container */
     .dashboard-container {
-        max-width: 1200px !important;
-        padding: 30px !important;
+        max-width: 1280px !important;
+        padding: 28px 32px !important;
         margin: 0 auto !important;
     }
 
+    /* =============================================
+       PC DASHBOARD: 1-COLUMN LAYOUT
+    ============================================= */
     .dashboard-flex-layout {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr;
-        gap: 24px !important;
-        align-items: stretch !important;
-    }
-
-    .db-left-col, .db-right-col {
         display: flex !important;
         flex-direction: column !important;
-        height: 100% !important;
+        gap: 24px !important;
     }
 
     .db-hero {
+        width: 100% !important;
+    }
+
+    .db-body-columns {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 24px !important;
+    }
+
+    /* Left & Right columns stack vertically */
+    .db-left-col, .db-right-col {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 24px !important;
+        min-width: 0;
+    }
+
+    /* Health tracker sub-grid: 2 columns side by side */
+    .health-card.health-tracker-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+        gap: 16px 24px !important;
+    }
+    .health-card.health-tracker-grid h3 {
         grid-column: span 2 !important;
     }
 
-    .health-tracker-grid, .db-utils {
-        flex-grow: 1 !important;
-        margin-top: auto !important;
-        margin-bottom: 0 !important;
+    /* Vitals 4 columns on PC */
+    .vitals-grid-inner {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     }
 
-    .db-sos {
-        margin-top: 0 !important;
+    /* Utilities grid: 4 columns on PC */
+    .utilities-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+
+    /* Right col utilities and SOS fill height nicely */
+    .db-utils {
+        flex: 1 0 auto !important;
     }
 
     /* 3. Sổ Khám Bệnh Responsive Layout */
@@ -250,11 +274,78 @@
         margin: 0 auto !important;
     }
 }
-
 .utility-page-container {
-    padding: 68px 16px 100px 16px;
+    padding: 12px 16px 100px 16px;
     max-width: 800px;
     margin: 0 auto;
 }
 
+/* ==========================================
+   MOBILE STICKY HEADER BAR & SKELETON STYLES
+   ========================================== */
 
+.mobile-header-bar {
+    display: none;
+}
+.mobile-menu-btn {
+    display: none;
+}
+
+/* Base style for skeleton shimmer */
+.skeleton-item {
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: shimmer-ani 1.5s infinite linear;
+}
+
+@keyframes shimmer-ani {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.vitals-grid-skeleton {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1024px) {
+    .mobile-header-bar {
+        display: flex !important;
+    }
+    .mobile-menu-btn {
+        display: none !important;
+    }
+    #main-content {
+        padding-top: 56px;
+    }
+    /* Hide page banners on mobile since they are now integrated dynamically into the header */
+    .dinhduong-hero-card,
+    .finance-header-banner,
+    .vax-header-banner,
+    .journal-header-banner,
+    .stats-dashboard-p,
+    .settings-header-banner,
+    .hero-card-s,
+    .album-header,
+    .album-hero-banner,
+    .handbook-header-banner,
+    .hero-card,
+    .hero-card-p {
+        display: none !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .split-grid-skeleton {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .health-grid-skeleton {
+        grid-template-columns: 1fr !important;
+    }
+    .vitals-grid-skeleton {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}

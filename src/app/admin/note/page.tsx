@@ -126,12 +126,20 @@ export default function HandbookPage() {
     return (
         <>
             <div className="utility-page-container fade-in">
-                {/* Header Title and Tab Switcher */}
-                <div className="handbook-header card" style={{ background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.5)', marginBottom: '20px' }}>
-                    <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <IoBookOutline style={{ fontSize: '2rem' }} /> Cẩm Nang Mẹ Bầu
-                    </h2>
-                    
+                {/* Header Title (Hero Banner) - hidden on mobile */}
+                <div className="handbook-header-banner" style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)', padding: '24px', borderRadius: '24px', color: 'white', position: 'relative', overflow: 'hidden', marginBottom: '20px', boxShadow: '0 10px 25px rgba(20, 184, 166, 0.25)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 2 }}>
+                        <div>
+                            <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <IoBookOutline /> Cẩm Nang Mẹ Bầu
+                            </h2>
+                            <p style={{ opacity: 0.9, fontSize: '0.88rem', marginTop: '6px', fontWeight: 500, margin: '6px 0 0 0' }}>Kiến thức thai kỳ theo từng tuần phát triển của bé yêu.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Week navigation and Timeline ribbon - always visible */}
+                <div className="handbook-nav-container card" style={{ background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.5)', padding: '20px', marginBottom: '20px', borderRadius: '24px' }}>
                     {/* Week navigation buttons */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
                         <button className="nav-btn" onClick={() => changeWeek(-1)} title="Tuần trước">
@@ -389,12 +397,14 @@ export default function HandbookPage() {
                     flex-direction: column;
                     gap: 20px;
                 }
+                @media (max-width: 1024px) {
+                    .handbook-header-banner {
+                        display: none !important;
+                    }
+                }
                 @media (max-width: 600px) {
                     :global(.utility-page-container) {
                         padding-top: 16px !important;
-                    }
-                    .handbook-header {
-                        padding-top: 56px !important;
                     }
                 }
 

@@ -551,10 +551,13 @@ export default function PrecautionsPage() {
                     letter-spacing: 0.3px;
                 }
 
-                @media (max-width: 600px) {
+                @media (max-width: 1024px) {
                     .hero-card-p {
-                        padding-top: 56px !important;
+                        display: none !important;
                     }
+                }
+
+                @media (max-width: 600px) {
                     :global(.utility-page-container) {
                         padding-top: 16px !important;
                     }

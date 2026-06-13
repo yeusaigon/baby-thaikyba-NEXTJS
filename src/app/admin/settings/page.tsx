@@ -253,12 +253,37 @@ export default function SettingsPage() {
             const checklistSnap = await getDocs(collection(db, "users", uid, "checklist_hospital"));
             const checklistData = checklistSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+            // 6. Immunizations
+            const immunizationsSnap = await getDocs(collection(db, "users", uid, "immunizations"));
+            const immunizationsData = immunizationsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // 7. Baby Journal
+            const babyJournalSnap = await getDocs(collection(db, "users", uid, "baby_journal"));
+            const babyJournalData = babyJournalSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // 8. Finance
+            const financeSnap = await getDocs(collection(db, "users", uid, "maternity_finance"));
+            const financeData = financeSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // 9. Health Vitals
+            const healthVitalsSnap = await getDocs(collection(db, "users", uid, "health_vitals"));
+            const healthVitalsData = healthVitalsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // 10. Baby Kicks
+            const babyKicksSnap = await getDocs(collection(db, "users", uid, "baby_kicks"));
+            const babyKicksData = babyKicksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
             const exportObj = {
                 profile: profileData,
                 visits: visitsData,
                 photos: photosData,
                 nutrition_diary: nutritionData,
-                checklist_hospital: checklistData
+                checklist_hospital: checklistData,
+                immunizations: immunizationsData,
+                baby_journal: babyJournalData,
+                maternity_finance: financeData,
+                health_vitals: healthVitalsData,
+                baby_kicks: babyKicksData
             };
 
             const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
@@ -364,6 +389,86 @@ export default function SettingsPage() {
                     await batch.commit();
                 }
 
+                // 6. Import Immunizations
+                if (data.immunizations && Array.isArray(data.immunizations)) {
+                    const existing = await getDocs(collection(db, "users", uid, "immunizations"));
+                    const clearBatch = writeBatch(db);
+                    existing.docs.forEach(docSnap => clearBatch.delete(docSnap.ref));
+                    await clearBatch.commit();
+
+                    const batch = writeBatch(db);
+                    data.immunizations.forEach((im: any) => {
+                        const { id, ...imData } = im;
+                        const ref = doc(collection(db, "users", uid, "immunizations"), id || undefined);
+                        batch.set(ref, imData);
+                    });
+                    await batch.commit();
+                }
+
+                // 7. Import Baby Journal
+                if (data.baby_journal && Array.isArray(data.baby_journal)) {
+                    const existing = await getDocs(collection(db, "users", uid, "baby_journal"));
+                    const clearBatch = writeBatch(db);
+                    existing.docs.forEach(docSnap => clearBatch.delete(docSnap.ref));
+                    await clearBatch.commit();
+
+                    const batch = writeBatch(db);
+                    data.baby_journal.forEach((bj: any) => {
+                        const { id, ...bjData } = bj;
+                        const ref = doc(collection(db, "users", uid, "baby_journal"), id || undefined);
+                        batch.set(ref, bjData);
+                    });
+                    await batch.commit();
+                }
+
+                // 8. Import Finance
+                if (data.maternity_finance && Array.isArray(data.maternity_finance)) {
+                    const existing = await getDocs(collection(db, "users", uid, "maternity_finance"));
+                    const clearBatch = writeBatch(db);
+                    existing.docs.forEach(docSnap => clearBatch.delete(docSnap.ref));
+                    await clearBatch.commit();
+
+                    const batch = writeBatch(db);
+                    data.maternity_finance.forEach((fi: any) => {
+                        const { id, ...fiData } = fi;
+                        const ref = doc(collection(db, "users", uid, "maternity_finance"), id || undefined);
+                        batch.set(ref, fiData);
+                    });
+                    await batch.commit();
+                }
+
+                // 9. Import Health Vitals
+                if (data.health_vitals && Array.isArray(data.health_vitals)) {
+                    const existing = await getDocs(collection(db, "users", uid, "health_vitals"));
+                    const clearBatch = writeBatch(db);
+                    existing.docs.forEach(docSnap => clearBatch.delete(docSnap.ref));
+                    await clearBatch.commit();
+
+                    const batch = writeBatch(db);
+                    data.health_vitals.forEach((hv: any) => {
+                        const { id, ...hvData } = hv;
+                        const ref = doc(collection(db, "users", uid, "health_vitals"), id || undefined);
+                        batch.set(ref, hvData);
+                    });
+                    await batch.commit();
+                }
+
+                // 10. Import Baby Kicks
+                if (data.baby_kicks && Array.isArray(data.baby_kicks)) {
+                    const existing = await getDocs(collection(db, "users", uid, "baby_kicks"));
+                    const clearBatch = writeBatch(db);
+                    existing.docs.forEach(docSnap => clearBatch.delete(docSnap.ref));
+                    await clearBatch.commit();
+
+                    const batch = writeBatch(db);
+                    data.baby_kicks.forEach((bk: any) => {
+                        const { id, ...bkData } = bk;
+                        const ref = doc(collection(db, "users", uid, "baby_kicks"), id || undefined);
+                        batch.set(ref, bkData);
+                    });
+                    await batch.commit();
+                }
+
                 alert("Nhập dữ liệu thành công!");
                 window.location.reload();
             } catch (err: any) {
@@ -384,7 +489,7 @@ export default function SettingsPage() {
         setIsResetting(true);
         try {
             const uid = user.uid;
-            const subCollections = ["visits", "photos", "nutrition_diary", "checklist_hospital"];
+            const subCollections = ["visits", "photos", "nutrition_diary", "checklist_hospital", "immunizations", "baby_journal", "maternity_finance", "health_vitals", "baby_kicks"];
             
             for (const colName of subCollections) {
                 const snap = await getDocs(collection(db, "users", uid, colName));

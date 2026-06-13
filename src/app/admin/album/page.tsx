@@ -540,14 +540,22 @@ export default function AlbumPage() {
     return (
         <>
             <div className="utility-page-container fade-in">
-            {/* Header Title and Tab Switcher */}
-            <div className="album-header card" style={{ background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.5)' }}>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <IoImagesOutline style={{ fontSize: '2rem' }} /> Album Kỷ Niệm
-                </h2>
-                
+            {/* Header Title (Hero Banner) - hidden on mobile */}
+            <div className="album-hero-banner" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', padding: '24px', borderRadius: '24px', color: 'white', position: 'relative', overflow: 'hidden', marginBottom: '20px', boxShadow: '0 10px 25px rgba(139, 92, 246, 0.25)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 2 }}>
+                    <div>
+                        <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <IoImagesOutline /> Album Kỷ Niệm
+                        </h2>
+                        <p style={{ opacity: 0.9, fontSize: '0.88rem', marginTop: '6px', fontWeight: 500, margin: '6px 0 0 0' }}>Lưu trữ những khoảnh khắc đáng yêu và ý nghĩa nhất của con.</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tab switch container - always visible */}
+            <div className="album-tabs-container card" style={{ background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.5)', padding: '12px', marginBottom: '20px', borderRadius: '18px' }}>
                 {/* Tab switch */}
-                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '14px', padding: '4px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '14px', padding: '4px' }}>
                     <button 
                         onClick={() => setActiveTab('photo')} 
                         className={`tab-toggle ${activeTab === 'photo' ? 'active' : ''}`}
@@ -1001,10 +1009,13 @@ export default function AlbumPage() {
 
             {/* Styles */}
             <style jsx global>{`
-                @media (max-width: 600px) {
-                    .album-header {
-                        padding-top: 56px !important;
+                @media (max-width: 1024px) {
+                    .album-hero-banner {
+                        display: none !important;
                     }
+                }
+
+                @media (max-width: 600px) {
                     :global(.utility-page-container) {
                         padding-top: 16px !important;
                     }

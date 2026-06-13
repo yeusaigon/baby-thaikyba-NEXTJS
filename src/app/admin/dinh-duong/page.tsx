@@ -661,8 +661,8 @@ export default function NutritionPage() {
 
             {/* Bottom Sheet modal for meal write */}
             {showModal && (
-                <div id="meal-modal" className="modal open" style={{ display: 'flex', position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2100, alignItems: 'flex-end', justifyContent: 'center' }} onClick={closeMealModal}>
-                    <div className="modal-bottom-sheet" style={{ width: '100%', maxWidth: '600px', background: 'white', borderRadius: '28px 28px 0 0', padding: '24px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+                <div id="meal-modal" className="nutrition-modal-overlay" onClick={closeMealModal}>
+                    <div className="nutrition-modal-sheet" onClick={(e) => e.stopPropagation()}>
                         <div className="sheet-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h3 id="meal-modal-title" style={{ margin: 0, fontSize: '1.3rem', color: '#1f1f1f', fontWeight: 800 }}>{mealId ? 'Sửa bữa ăn' : 'Ghi chép bữa ăn'}</h3>
                             <button onClick={closeMealModal} className="icon-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#444' }}>
@@ -1312,12 +1312,46 @@ export default function NutritionPage() {
                     margin-top: 6px;
                 }
 
-                /* BOTTOM SHEET MODAL ANIMATION */
-                .modal.open .modal-bottom-sheet {
-                    animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                .nutrition-modal-overlay {
+                    display: flex;
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0,0,0,0.5);
+                    backdrop-filter: blur(4px);
+                    z-index: 2100;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                }
+                .nutrition-modal-sheet {
+                    width: 100%;
+                    max-width: 600px;
+                    background: white;
+                    border-radius: 28px;
+                    padding: 24px;
+                    max-height: 90vh;
+                    display: flex;
+                    flex-direction: column;
+                    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+                    animation: zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+                @keyframes zoomIn {
+                    from { transform: scale(0.9) translateY(10px); opacity: 0; }
+                    to { transform: scale(1) translateY(0); opacity: 1; }
                 }
 
-                @keyframes slideUpModal {
+                @media (max-width: 900px) {
+                    .nutrition-modal-overlay {
+                        align-items: flex-end;
+                        padding: 0;
+                    }
+                    .nutrition-modal-sheet {
+                        border-radius: 28px 28px 0 0;
+                        max-height: 85vh;
+                        animation: slideUpV2 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+                }
+                @keyframes slideUpV2 {
                     from { transform: translateY(100%); }
                     to { transform: translateY(0); }
                 }
