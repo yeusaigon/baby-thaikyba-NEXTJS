@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Check if user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+    
+    // Check if the current user is the owner of the data folder
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+    
+    // Check if the current user is a linked partner of the owner
+    function isPartner(userId) {
+      return isAuth() && (
+        get(/databases/$(database)/documents/users/$(userId)/settings/profile).data.partnerUid == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)/settings/profile).data.partnerUid == userId
+      );
+    }
+
+    // Main users collection rules
+    match /users/{userId} {
+      // Allow read/write if own account or linked partner
+      allow read, write: if isOwner(userId) || isPartner(userId);
+      
+      // Settings profile has unique rules to avoid recursion during partner lookup checks
+      match /settings/profile {
+        allow read, write: if isOwner(userId) || isAuth();
+      }
+
+      // Recursively apply access check to sub-collections (visits, baby_kicks, nutrition_diary, etc.)
+      match /{document=**} {
+        allow read, write: if isOwner(userId) || isPartner(userId);
+      }
+    }
+  }
+}
