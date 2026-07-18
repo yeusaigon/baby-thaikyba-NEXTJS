@@ -212,7 +212,76 @@ const CALORIE_DB = [
     { keywords: ['trà sữa'], cal: 350 },
     { keywords: ['nước râu ngô'], cal: 30 },
     { keywords: ['nước đậu đen'], cal: 50 },
-    { keywords: ['chè bắp', 'chè sen', 'chè ít đường', 'chè'], cal: 250 }
+    { keywords: ['chè bắp', 'chè sen', 'chè ít đường', 'chè'], cal: 250 },
+
+    // ─── 5. MÓN ĂN THƯỢNG HẠNG / SANG XỊN CHO MẸ BẦU ──────────────────────────────
+    { keywords: ['súp bào ngư vi cá', 'súp bào ngư nấm đông cô', 'súp bào ngư', 'soup bào ngư'], cal: 250 },
+    { keywords: ['cháo bào ngư gà ác', 'cháo bào ngư'], cal: 320 },
+    { keywords: ['bào ngư sốt dầu hào', 'bào ngư áp chảo', 'bào ngư hầm sốt'], cal: 280 },
+    { keywords: ['tổ yến chưng nhân sâm', 'yến chưng sâm', 'trà sâm yến'], cal: 120 },
+    { keywords: ['tổ yến chưng đông trùng', 'yến chưng đông trùng hạ thảo', 'yến chưng đông trùng'], cal: 110 },
+    { keywords: ['tổ yến chưng hạt chia', 'yến chưng hạt chia'], cal: 95 },
+    { keywords: ['tổ yến chưng đường phèn táo đỏ', 'yến chưng táo đỏ hạt sen', 'tổ yến chưng đường phèn', 'yến chưng đường phèn'], cal: 90 },
+    { keywords: ['súp yến sào', 'soup yến sào', 'súp tổ yến'], cal: 180 },
+    { keywords: ['bò wagyu nướng', 'bò wagyu áp chảo', 'bò kobe nướng', 'bò kobe áp chảo', 'bò wagyu', 'bò kobe'], cal: 480 },
+    { keywords: ['steak bò wagyu', 'steak bò kobe', 'steak bò mỹ', 'bít tết bò mỹ', 'steak bò', 'bít tết bò'], cal: 450 },
+    { keywords: ['tôm hùm nướng phô mai', 'tôm hùm nướng bơ tỏi', 'tôm hùm đút lò'], cal: 400 },
+    { keywords: ['tôm hùm hấp nước dừa', 'tôm hùm hấp bia', 'tôm hùm hấp', 'tôm hùm luộc'], cal: 250 },
+    { keywords: ['cháo tôm hùm'], cal: 300 },
+    { keywords: ['cua hoàng đế hấp', 'chân cua hoàng đế', 'cua hoàng đế'], cal: 220 },
+    { keywords: ['soup cua hoàng đế', 'súp cua hoàng đế'], cal: 160 },
+    { keywords: ['gan ngỗng áp chảo', 'gan ngỗng pháp', 'gan ngỗng foie gras', 'gan ngỗng'], cal: 320 },
+    { keywords: ['cá hồi áp chảo sốt kem bơ', 'cá hồi sốt kem bơ', 'cá hồi sốt kem'], cal: 350 },
+    { keywords: ['cháo cá hồi na uy', 'cháo cá hồi cao cấp'], cal: 280 },
+    { keywords: ['nho mẫu đơn nhật', 'nho mẫu đơn hàn quốc', 'nho mẫu đơn', 'nho shine muscat'], cal: 80 },
+    { keywords: ['nho ngón tay mỹ', 'nho ngón tay', 'nho đen không hạt', 'nho mỹ không hạt'], cal: 75 },
+    { keywords: ['cherry mỹ quả to', 'cherry úc', 'quả anh đào cherry', 'quả anh đào', 'cherry đỏ', 'cherry vàng', 'cherry'], cal: 70 },
+    { keywords: ['kiwi vàng new zealand', 'kiwi xanh new zealand', 'kiwi vàng', 'kiwi xanh', 'quả kiwi', 'trái kiwi'], cal: 60 },
+    { keywords: ['quả mâm xôi', 'trái mâm xôi', 'raspberry', 'blackberry'], cal: 50 },
+    { keywords: ['hạt chia organic', 'hạt chia úc', 'thạch hạt chia'], cal: 80 },
+    { keywords: ['hạt thông hữu cơ', 'hạt thông'], cal: 180 },
+    { keywords: ['nhụy hoa nghệ tây saffron', 'trà saffron mật ong', 'trà saffron', 'saffron'], cal: 15 },
+    { keywords: ['sữa saffron', 'sữa nhụy hoa nghệ tây'], cal: 150 },
+    { keywords: ['yến mạch organic', 'diêm mạch hữu cơ', 'hạt diêm mạch', 'quinoa'] , cal: 160 },
+
+    // ─── 6. MÓN TRÁNG MIỆNG & BỮA PHỤ CHO MẸ BẦU (CHÈ, SINH TỐ, NƯỚC ÉP, BÁNH NGỌT, TÀO PHỚ...) ───
+    { keywords: ['chè dưỡng nhan', 'chè tuyết yến', 'chè tuyết yến nhựa đào'], cal: 150 },
+    { keywords: ['chè hạt sen long nhãn', 'chè hạt sen táo đỏ', 'chè hạt sen'], cal: 180 },
+    { keywords: ['chè đậu đỏ cốt dừa', 'chè đậu đỏ hạt sen', 'chè đậu đỏ'], cal: 200 },
+    { keywords: ['chè mè đen đường phèn', 'chè mè đen', 'chè chí mà phù'], cal: 150 },
+    { keywords: ['chè đậu xanh nước cốt dừa', 'chè đậu xanh đánh', 'chè đậu xanh'], cal: 180 },
+    { keywords: ['chè trôi nước cốt dừa', 'chè trôi nước'], cal: 300 },
+    { keywords: ['tào phớ nước đường', 'tào phớ trân châu đường đen', 'tào phớ gừng', 'tào phớ', 'tàu hũ nước đường', 'tàu hũ gừng', 'tàu hủ nước đường'], cal: 120 },
+    { keywords: ['bánh flan nước cốt dừa', 'bánh flan caramen', 'bánh flan', 'caramen', 'kem caramen'], cal: 150 },
+    { keywords: ['sinh tố bơ sầu riêng', 'sinh tố bơ cốt dừa', 'sinh tố bơ ít đường', 'sinh tố bơ'], cal: 280 },
+    { keywords: ['sinh tố xoài chuối', 'sinh tố xoài', 'sinh tố chuối', 'sinh tố sapoche', 'sinh tố mãng cầu', 'sinh tố dâu tây', 'sinh tố dâu', 'sinh tố thập cẩm', 'sinh tố'], cal: 220 },
+    { keywords: ['nước dừa tươi', 'nước dừa xiêm', 'nước dừa', 'trái dừa tươi'], cal: 60 },
+    { keywords: ['nước cam ép ít đường', 'nước cam vắt mật ong', 'nước cam vắt', 'nước cam vắt nguyên chất', 'nước cam ép', 'nước cam'], cal: 100 },
+    { keywords: ['nước ép bưởi', 'nước ép cà rốt', 'nước ép táo', 'nước ép dưa hấu', 'nước ép thơm', 'nước ép dứa', 'nước ép cà chua', 'nước ép ổi', 'nước ép trái cây', 'nước ép'], cal: 90 },
+    { keywords: ['sữa chua uống probi', 'sữa chua uống yakult', 'sữa chua uống yomost', 'sữa chua uống'], cal: 80 },
+    { keywords: ['bánh tart trứng kfc', 'bánh tart trứng'], cal: 170 },
+    { keywords: ['bánh su kem kem sữa', 'bánh su kem bơ', 'bánh su kem', 'su kem'], cal: 120 },
+    { keywords: ['bánh bông lan trứng muối chà bông', 'bánh bông lan trứng muối'], cal: 320 },
+    { keywords: ['bánh mousse socola', 'bánh mousse dâu', 'bánh mousse chanh leo', 'bánh mousse', 'bánh phô mai', 'cheesecake', 'bánh ngọt', 'tiramisu'], cal: 250 },
+    { keywords: ['rau câu dừa sợi', 'rau câu trái cây', 'rau câu lá dứa', 'rau câu', 'thạch dừa'], cal: 80 },
+    { keywords: ['dĩa trái cây thập cẩm', 'đĩa trái cây', 'trái cây đĩa', 'trái cây tô', 'trái cây dầm', 'hoa quả dầm'], cal: 120 },
+    { keywords: ['khoai lang nướng mật', 'khoai lang nướng', 'khoai lang luộc', 'khoai mật'], cal: 150 },
+    { keywords: ['bắp ngô ngọt luộc', 'ngô luộc', 'bắp luộc'], cal: 120 },
+
+    // ─── 7. SIÊU THỰC PHẨM & DINH DƯỠNG ĐẶC BIỆT CHO THAI NHI (GIÀU FOLATE, SẮT, CANXI, DHA...) ───
+    { keywords: ['cải bó xôi luộc', 'rau chân vịt luộc', 'cải bó xôi xào', 'rau chân vịt xào', 'cải bó xôi', 'rau chân vịt'], cal: 45 },
+    { keywords: ['quả bơ chín', 'trái bơ sáp', 'quả bơ', 'trái bơ'], cal: 160 },
+    { keywords: ['chuối chín', 'chuối tiêu', 'chuối sứ', 'chuối già', 'trái chuối', 'quả chuối'], cal: 90 },
+    { keywords: ['thanh long ruột đỏ', 'thanh long ruột trắng', 'thanh long'], cal: 60 },
+    { keywords: ['đu đủ chín', 'quả đu đủ'], cal: 60 },
+    { keywords: ['cá cơm rim đường', 'cá cơm kho tiêu', 'cá cơm kho', 'cá cơm rim', 'cá cơm khô', 'cá cơm'], cal: 150 },
+    { keywords: ['phô mai con bò cười', 'phô mai lát', 'phô mai mozzarella', 'phô mai miếng', 'phô mai'], cal: 80 },
+    { keywords: ['nước gạo lứt rang', 'trà gạo lứt đậu đen', 'trà gạo lứt', 'nước gạo lứt'], cal: 50 },
+    { keywords: ['sữa nghệ ấm', 'sữa nghệ mật ong', 'sữa nghệ'], cal: 120 },
+    { keywords: ['hạt chia pha nước', 'nước hạt chia'], cal: 40 },
+    { keywords: ['măng tây luộc', 'măng tây hấp', 'măng tây'], cal: 35 },
+    { keywords: ['quả sung hầm đường phèn', 'quả sung chín', 'trái sung', 'quả sung'], cal: 50 },
+    { keywords: ['táo đỏ sấy khô', 'táo tàu', 'táo đỏ khô', 'táo đỏ'], cal: 80 }
 ];
 
 const WEEKLY_MENU = [
@@ -486,10 +555,28 @@ export default function NutritionPage() {
         });
         flatKeywords.sort((a, b) => b.keyword.length - a.keyword.length);
 
+        const isWordChar = (char: string) => {
+            if (!char) return false;
+            return /[a-zA-Z0-9àáảãạâầấẩẫậăằắẳẵặèéẻẽẹêềếểễệđìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵ]/i.test(char);
+        };
+
         flatKeywords.forEach(fk => {
-            let index;
+            let index = 0;
             // Tìm và xử lý tất cả các lần xuất hiện của từ khóa
-            while ((index = text.indexOf(fk.keyword)) !== -1) {
+            while (true) {
+                index = text.indexOf(fk.keyword, index);
+                if (index === -1) break;
+
+                // Kiểm tra ranh giới từ (word boundary)
+                const charBefore = index > 0 ? text[index - 1] : '';
+                const charAfter = index + fk.keyword.length < text.length ? text[index + fk.keyword.length] : '';
+
+                if (isWordChar(charBefore) || isWordChar(charAfter)) {
+                    // Không phải ranh giới từ, tìm kiếm tiếp từ vị trí sau index
+                    index += 1;
+                    continue;
+                }
+
                 // Lấy chuỗi ký tự phía trước từ khóa (tối đa 15 ký tự) để tìm số lượng/số nhân
                 const beforeText = text.substring(Math.max(0, index - 15), index);
                 const matches = [...beforeText.matchAll(/(\d+(?:[.,]\d+)?)/g)];
@@ -520,6 +607,8 @@ export default function NutritionPage() {
                     const matchLen = lastMatch[0].length;
                     text = text.substring(0, absMatchIndex) + ' '.repeat(matchLen) + text.substring(absMatchIndex + matchLen);
                 }
+
+                index += fk.keyword.length;
             }
         });
 
@@ -580,7 +669,9 @@ export default function NutritionPage() {
         setMealContent(m.content);
         const matched = parseMealFoods(m.content);
         setDetectedFoods(matched);
-        setMealCalories(m.calories ? m.calories.toString() : ''); 
+        const totalParsed = matched.reduce((sum, item) => sum + item.calories, 0);
+        const calVal = totalParsed > 0 ? totalParsed : (m.calories || 0);
+        setMealCalories(calVal ? calVal.toString() : ''); 
         setShowModal(true);
     };
 
@@ -598,7 +689,11 @@ export default function NutritionPage() {
         const dateKey = m.datetime ? m.datetime.split('T')[0] : 'Chưa xác định';
         if (!groups[dateKey]) groups[dateKey] = { meals: [], totalCal: 0 };
         groups[dateKey].meals.push(m);
-        groups[dateKey].totalCal += (Number(m.calories) || 0);
+        const breakdown = parseMealFoods(m.content);
+        const mealCal = breakdown.length > 0
+            ? breakdown.reduce((sum, item) => sum + item.calories, 0)
+            : (Number(m.calories) || 0);
+        groups[dateKey].totalCal += mealCal;
     });
 
     const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
@@ -894,7 +989,7 @@ export default function NutritionPage() {
                                         paginatedDates.map(date => {
                                             let dateLabel = date === todayStr ? "Hôm nay" : date === yesterdayStr ? "Hôm qua" : date.split('-').reverse().join('/');
                                             const group = groups[date];
-                                            const sortedMeals = [...group.meals].sort((a, b) => (a.datetime || '').localeCompare(b.datetime || ''));
+                                            const sortedMeals = [...group.meals].sort((a, b) => (b.datetime || '').localeCompare(a.datetime || ''));
                                             return (
                                                 <div className="day-card" key={date}>
                                                     <div className="day-header">
@@ -905,11 +1000,15 @@ export default function NutritionPage() {
                                                         {sortedMeals.map((m, idx) => {
                                                             const timeStr = m.datetime ? m.datetime.split('T')[1]?.substring(0, 5) : '';
                                                             const matchedBreakdown = parseMealFoods(m.content);
+                                                            const mealCal = matchedBreakdown.length > 0
+                                                                ? matchedBreakdown.reduce((sum, item) => sum + item.calories, 0)
+                                                                : (Number(m.calories) || 0);
+                                                            const chronologicalIdx = sortedMeals.length - idx;
                                                             return (
                                                                 <div className="day-meal-item" key={m.id} style={{ borderLeftColor: mealColors[m.type] || '#ccc' }}>
                                                                     <div className="dmi-top">
                                                                         <div className="dmi-type" style={{ color: mealColors[m.type], display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                            <span style={{ background: 'rgba(148,163,184,0.15)', color: '#64748b', fontSize: '0.72rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>#{idx + 1}</span>
+                                                                            <span style={{ background: 'rgba(148,163,184,0.15)', color: '#64748b', fontSize: '0.72rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>#{chronologicalIdx}</span>
                                                                             <span style={{ fontSize: '1.1rem' }}>{m.type === 'sang' ? '🌅' : m.type === 'trua' ? '☀️' : m.type === 'toi' ? '🌙' : '☕'}</span>
                                                                             <span>{mealNames[m.type] || 'Bữa ăn'}</span>
                                                                             <span className="dmi-time">{timeStr}</span>
@@ -938,7 +1037,7 @@ export default function NutritionPage() {
                                                                             ))}
                                                                         </div>
                                                                     )}
-                                                                    {m.calories > 0 && <div className="dmi-cal"><IoFlameOutline /> {m.calories} kcal</div>}
+                                                                    {mealCal > 0 && <div className="dmi-cal"><IoFlameOutline /> {mealCal} kcal</div>}
                                                                 </div>
                                                             );
                                                         })}
