@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { 
@@ -8,8 +8,9 @@ import {
     IoCloseOutline
 } from 'react-icons/io5';
 import Link from 'next/link';
+import { computeBabyAgeDetails } from '@/lib/babyMilestones';
 
-interface Vaccine {
+export interface Vaccine {
     id: string;
     name: string;
     ageGroup: string;
@@ -17,7 +18,7 @@ interface Vaccine {
     description: string;
 }
 
-const DEFAULT_VACCINES: Vaccine[] = [
+export const DEFAULT_VACCINES: Vaccine[] = [
     // Sơ sinh (0 - 1 tháng)
     { id: 'bcg', name: 'Lao (BCG)', ageGroup: 'Sơ sinh', disease: 'Bệnh lao', description: 'Tiêm càng sớm càng tốt trong vòng 30 ngày sau sinh.' },
     { id: 'hepb_0', name: 'Viêm gan B (Sơ sinh)', ageGroup: 'Sơ sinh', disease: 'Viêm gan B', description: 'Tiêm trong vòng 24 giờ đầu sau sinh.' },
@@ -394,6 +395,10 @@ export default function ImmunizationTracker() {
     const [recConditions, setRecConditions] = useState<string[]>([]);
     const [recTableSelect, setRecTableSelect] = useState<'age' | 'risk'>('age');
 
+    // Profile & Baby Info
+    const [profile, setProfile] = useState<any>({});
+    const [babyVaxFilter, setBabyVaxFilter] = useState<'all' | 'due' | 'upcoming' | 'done'>('all');
+
     // Form State
     const [selectedVax, setSelectedVax] = useState<Vaccine | null>(null);
     const [isDone, setIsDone] = useState(false);
@@ -405,23 +410,70 @@ export default function ImmunizationTracker() {
     const [showAddCustom, setShowAddCustom] = useState(false);
 
     useEffect(() => {
+        let unsubProfile: (() => void) | null = null;
+        let unsubDb: (() => void) | null = null;
+
         const unsubscribe = auth.onAuthStateChanged((currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                const unsubDb = onSnapshot(collection(db, "users", currentUser.uid, "immunizations"), (snap) => {
+                unsubDb = onSnapshot(collection(db, "users", currentUser.uid, "immunizations"), (snap) => {
                     const data: Record<string, any> = {};
                     snap.docs.forEach(d => { data[d.id] = d.data(); });
                     setUserVax(data);
                     setLoading(false);
                 });
-                return () => unsubDb();
+                unsubProfile = onSnapshot(doc(db, "users", currentUser.uid, "settings", "profile"), (d) => {
+                    if (d.exists()) setProfile(d.data());
+                });
             } else {
                 setUser(null);
+                setProfile({});
                 setLoading(false);
             }
         });
-        return () => unsubscribe();
+        return () => {
+            unsubscribe();
+            if (unsubDb) unsubDb();
+            if (unsubProfile) unsubProfile();
+        };
     }, []);
+
+    const babyInfo = profile?.babyInfo;
+    const babyAge = babyInfo?.dob ? computeBabyAgeDetails(babyInfo.dob) : null;
+
+    const computeProjectedDate = (ageGroup: string) => {
+        if (!babyInfo?.dob) return null;
+        const dob = new Date(babyInfo.dob);
+        if (isNaN(dob.getTime())) return null;
+
+        const ageToMonths: Record<string, number> = {
+            'Sơ sinh': 0,
+            '1 tháng': 1,
+            '2 tháng': 2,
+            '3 tháng': 3,
+            '4 tháng': 4,
+            '6 tháng': 6,
+            '7 tháng': 7,
+            '9 tháng': 9,
+            '12 tháng': 12,
+            '18 tháng': 18,
+            '24 tháng': 24,
+            '9 - 17 tuổi': 108
+        };
+
+        if (ageToMonths[ageGroup] === undefined) return null;
+        const target = new Date(dob);
+        target.setMonth(target.getMonth() + ageToMonths[ageGroup]);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const targetMidnight = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+        const diffDays = Math.ceil((targetMidnight.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return {
+            date: target,
+            dateStr: `${target.getDate().toString().padStart(2, '0')}/${(target.getMonth() + 1).toString().padStart(2, '0')}/${target.getFullYear()}`,
+            diffDays
+        };
+    };
 
     const openVaxModal = (vax: Vaccine) => {
         setSelectedVax(vax);
@@ -573,11 +625,41 @@ export default function ImmunizationTracker() {
         }
     });
 
+    const babyVaxStats = useMemo(() => {
+        if (activeTab !== 'baby') return { total: 0, due: 0, upcoming: 0, done: 0 };
+        let due = 0;
+        let upcoming = 0;
+        let done = 0;
+        activeList.forEach(v => {
+            const isDone = !!userVax[v.id]?.dateDone;
+            if (isDone) {
+                done++;
+            } else {
+                const proj = computeProjectedDate(v.ageGroup);
+                if (proj) {
+                    if (proj.diffDays <= 0) due++;
+                    else if (proj.diffDays <= 30) upcoming++;
+                }
+            }
+        });
+        return { total: activeList.length, due, upcoming, done };
+    }, [activeList, userVax, babyInfo?.dob, activeTab]);
+
     const currentAgeGroups = activeTab === 'baby' ? BABY_AGE_GROUPS : (activeTab === 'mom' ? MOM_AGE_GROUPS : []);
-    const groupedVaccines = currentAgeGroups.map(age => ({
-        age,
-        list: activeList.filter(v => v.ageGroup === age)
-    })).filter(g => g.list.length > 0);
+    const groupedVaccines = currentAgeGroups.map(age => {
+        const list = activeList.filter(v => v.ageGroup === age).filter(v => {
+            if (activeTab !== 'baby' || babyVaxFilter === 'all') return true;
+            const isDone = !!userVax[v.id]?.dateDone;
+            if (babyVaxFilter === 'done') return isDone;
+            if (isDone) return false;
+            const proj = computeProjectedDate(v.ageGroup);
+            if (!proj) return true;
+            if (babyVaxFilter === 'due') return proj.diffDays <= 0;
+            if (babyVaxFilter === 'upcoming') return proj.diffDays > 0 && proj.diffDays <= 30;
+            return true;
+        });
+        return { age, list };
+    }).filter(g => g.list.length > 0);
 
     const totalVaccines = activeList.length;
     const completedVaccines = activeList.filter(v => userVax[v.id]?.dateDone).length;
@@ -1091,8 +1173,156 @@ export default function ImmunizationTracker() {
                         </div>
                     </div>
 
+                    {activeTab === 'baby' && (
+                        <div style={{
+                            background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+                            border: '1.5px solid #a7f3d0',
+                            borderRadius: '20px',
+                            padding: '16px 20px',
+                            marginBottom: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '12px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                <div style={{
+                                    width: '46px',
+                                    height: '46px',
+                                    borderRadius: '50%',
+                                    background: '#10b981',
+                                    color: 'white',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '1.4rem'
+                                }}>
+                                    {babyInfo?.gender === 'female' ? '👧' : '👶'}
+                                </div>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#065f46' }}>
+                                            {babyInfo?.name || 'Bé cưng'}
+                                        </h3>
+                                        {babyAge && (
+                                            <span style={{ fontSize: '0.74rem', background: '#059669', color: 'white', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
+                                                {babyAge.months} tháng {babyAge.days} ngày tuổi
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div style={{ fontSize: '0.78rem', color: '#047857', marginTop: '3px' }}>
+                                        {babyInfo?.dob ? `Sinh ngày: ${babyInfo.dob.split('-').reverse().join('/')} • Hệ thống tự động tính lịch dự kiến theo độ tuổi của bé` : 'Chưa thiết lập ngày sinh • Vào Cài đặt để cập nhật lịch dự kiến chính xác'}
+                                    </div>
+                                </div>
+                            </div>
+                            {!babyInfo?.dob && (
+                                <Link href="/admin/settings" style={{
+                                    background: '#059669',
+                                    color: 'white',
+                                    padding: '8px 14px',
+                                    borderRadius: '12px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 700,
+                                    textDecoration: 'none'
+                                }}>
+                                    Cập nhật ngày sinh bé
+                                </Link>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'baby' && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                            <button
+                                onClick={() => setBabyVaxFilter('all')}
+                                style={{
+                                    padding: '7px 14px',
+                                    borderRadius: '12px',
+                                    border: '1.5px solid',
+                                    borderColor: babyVaxFilter === 'all' ? '#10b981' : '#e2e8f0',
+                                    background: babyVaxFilter === 'all' ? '#ecfdf5' : 'white',
+                                    color: babyVaxFilter === 'all' ? '#047857' : '#64748b',
+                                    fontWeight: 700,
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Tất cả ({babyVaxStats.total})
+                            </button>
+                            <button
+                                onClick={() => setBabyVaxFilter('due')}
+                                style={{
+                                    padding: '7px 14px',
+                                    borderRadius: '12px',
+                                    border: '1.5px solid',
+                                    borderColor: babyVaxFilter === 'due' ? '#ef4444' : '#e2e8f0',
+                                    background: babyVaxFilter === 'due' ? '#fef2f2' : 'white',
+                                    color: babyVaxFilter === 'due' ? '#b91c1c' : '#64748b',
+                                    fontWeight: 700,
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <span>⚠️ Cần tiêm ngay</span>
+                                <span style={{ background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: '10px', fontSize: '0.72rem' }}>
+                                    {babyVaxStats.due}
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => setBabyVaxFilter('upcoming')}
+                                style={{
+                                    padding: '7px 14px',
+                                    borderRadius: '12px',
+                                    border: '1.5px solid',
+                                    borderColor: babyVaxFilter === 'upcoming' ? '#3b82f6' : '#e2e8f0',
+                                    background: babyVaxFilter === 'upcoming' ? '#eff6ff' : 'white',
+                                    color: babyVaxFilter === 'upcoming' ? '#1d4ed8' : '#64748b',
+                                    fontWeight: 700,
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <span>⏳ Sắp đến (30 ngày)</span>
+                                <span style={{ background: '#dbeafe', color: '#2563eb', padding: '1px 6px', borderRadius: '10px', fontSize: '0.72rem' }}>
+                                    {babyVaxStats.upcoming}
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => setBabyVaxFilter('done')}
+                                style={{
+                                    padding: '7px 14px',
+                                    borderRadius: '12px',
+                                    border: '1.5px solid',
+                                    borderColor: babyVaxFilter === 'done' ? '#10b981' : '#e2e8f0',
+                                    background: babyVaxFilter === 'done' ? '#ecfdf5' : 'white',
+                                    color: babyVaxFilter === 'done' ? '#047857' : '#64748b',
+                                    fontWeight: 700,
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <span>✅ Đã tiêm</span>
+                                <span style={{ background: '#d1fae5', color: '#059669', padding: '1px 6px', borderRadius: '10px', fontSize: '0.72rem' }}>
+                                    {babyVaxStats.done}
+                                </span>
+                            </button>
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#334155' }}>Danh sách mũi tiêm chủng</h3>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#334155' }}>
+                            {activeTab === 'baby' && babyVaxFilter !== 'all' ? `Danh sách lọc: ${babyVaxFilter === 'due' ? 'Mũi cần tiêm ngay' : babyVaxFilter === 'upcoming' ? 'Mũi sắp đến hạn' : 'Mũi đã tiêm'}` : 'Danh sách mũi tiêm chủng'}
+                        </h3>
                         <button 
                             onClick={() => setShowAddCustom(true)}
                             style={{ background: activeTab === 'mom' ? '#ec4899' : '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '12px', fontWeight: 700, fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: activeTab === 'mom' ? '0 4px 10px rgba(236, 72, 153, 0.2)' : '0 4px 10px rgba(16, 185, 129, 0.2)' }}
@@ -1102,7 +1332,17 @@ export default function ImmunizationTracker() {
                     </div>
 
                     <div className="vax-timeline-list" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {groupedVaccines.map((group, groupIdx) => (
+                        {groupedVaccines.length === 0 ? (
+                            <div style={{ background: 'white', borderRadius: '20px', padding: '36px 20px', textAlign: 'center', color: '#94a3b8', border: '1px dashed #cbd5e1' }}>
+                                <p style={{ margin: 0, fontSize: '0.92rem', fontWeight: 600 }}>Không có mũi tiêm nào trong bộ lọc này.</p>
+                                <button
+                                    onClick={() => setBabyVaxFilter('all')}
+                                    style={{ marginTop: '12px', background: '#f1f5f9', border: 'none', padding: '6px 14px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, color: '#475569', cursor: 'pointer' }}
+                                >
+                                    Xem tất cả mũi tiêm
+                                </button>
+                            </div>
+                        ) : groupedVaccines.map((group, groupIdx) => (
                             <div className="vax-group" key={groupIdx} style={{ background: 'white', borderRadius: '24px', border: '1px solid #f1f5f9', padding: '20px', boxShadow: 'var(--shadow-soft)' }}>
                                 <h4 style={{ margin: '0 0 16px 0', color: activeTab === 'mom' ? '#db2777' : '#10b981', fontWeight: 900, fontSize: '1.05rem', borderBottom: '1.5px dashed #f1f5f9', paddingBottom: '10px' }}>
                                     {activeTab === 'baby' ? `Trẻ ở mốc ${group.age}` : `Khuyến nghị ở mốc ${group.age}`}
@@ -1111,6 +1351,7 @@ export default function ImmunizationTracker() {
                                     {group.list.map((vax, idx) => {
                                         const record = userVax[vax.id];
                                         const isDone = record && !!record.dateDone;
+                                        const proj = activeTab === 'baby' ? computeProjectedDate(vax.ageGroup) : null;
                                         return (
                                             <div 
                                                 onClick={() => openVaxModal(vax)}
@@ -1119,7 +1360,7 @@ export default function ImmunizationTracker() {
                                                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderRadius: '18px', border: '1.5px solid #f1f5f9', cursor: 'pointer', transition: 'all 0.25s', background: isDone ? (activeTab === 'mom' ? '#fdf2f8' : '#f0fdf4') : '#fafafa', borderColor: isDone ? (activeTab === 'mom' ? '#fbcfe8' : '#bbf7d0') : '#f1f5f9' }}
                                             >
                                                 <div style={{ flex: 1, paddingRight: '12px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                                         <strong style={{ fontSize: '0.92rem', color: isDone ? (activeTab === 'mom' ? '#9d174d' : '#14532d') : '#1e293b' }}>{vax.name}</strong>
                                                         {vax.id.startsWith('custom_') && (
                                                             <span style={{ fontSize: '0.65rem', background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>Tùy chọn</span>
@@ -1127,12 +1368,66 @@ export default function ImmunizationTracker() {
                                                     </div>
                                                     <div style={{ fontSize: '0.78rem', color: isDone ? (activeTab === 'mom' ? '#be185d' : '#15803d') : '#64748b', marginTop: '4px', fontWeight: 500 }}>Phòng bệnh: {vax.disease}</div>
                                                     <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.4 }}>{vax.description}</p>
-                                                    {isDone && record && (
+                                                    
+                                                    {/* Schedule Status & Dates */}
+                                                    {isDone && record ? (
                                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', fontSize: '0.75rem', color: activeTab === 'mom' ? '#9d174d' : '#166534', fontWeight: 600 }}>
-                                                            <span>📅 Ngày tiêm: {record.dateDone.split('-').reverse().join('/')}</span>
+                                                            <span>📅 Đã tiêm: {record.dateDone.split('-').reverse().join('/')}</span>
                                                             {record.reaction && <span>🤒 Phản ứng: {record.reaction}</span>}
                                                         </div>
-                                                    )}
+                                                    ) : proj ? (
+                                                        <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                                                            {proj.diffDays < 0 ? (
+                                                                <span style={{
+                                                                    background: '#fef2f2',
+                                                                    color: '#dc2626',
+                                                                    border: '1px solid #fecaca',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '8px',
+                                                                    fontSize: '0.74rem',
+                                                                    fontWeight: 700
+                                                                }}>
+                                                                    ⚠️ Quá hạn {Math.abs(proj.diffDays)} ngày (Dự kiến: {proj.dateStr})
+                                                                </span>
+                                                            ) : proj.diffDays === 0 ? (
+                                                                <span style={{
+                                                                    background: '#fffbeb',
+                                                                    color: '#b45309',
+                                                                    border: '1px solid #fde68a',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '8px',
+                                                                    fontSize: '0.74rem',
+                                                                    fontWeight: 700
+                                                                }}>
+                                                                    🔔 Đến hạn hôm nay ({proj.dateStr})
+                                                                </span>
+                                                            ) : proj.diffDays <= 30 ? (
+                                                                <span style={{
+                                                                    background: '#eff6ff',
+                                                                    color: '#1d4ed8',
+                                                                    border: '1px solid #bfdbfe',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '8px',
+                                                                    fontSize: '0.74rem',
+                                                                    fontWeight: 700
+                                                                }}>
+                                                                    ⏳ Sắp đến: {proj.diffDays} ngày nữa ({proj.dateStr})
+                                                                </span>
+                                                            ) : (
+                                                                <span style={{
+                                                                    background: '#f8fafc',
+                                                                    color: '#64748b',
+                                                                    border: '1px solid #e2e8f0',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '8px',
+                                                                    fontSize: '0.74rem',
+                                                                    fontWeight: 600
+                                                                }}>
+                                                                    📅 Dự kiến: {proj.dateStr}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ) : null}
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                     {isDone ? <IoCheckmarkCircle size={24} color={activeTab === 'mom' ? '#ec4899' : '#10b981'} /> : <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: '2px solid #cbd5e1' }} />}

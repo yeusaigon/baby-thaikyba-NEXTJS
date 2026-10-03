@@ -5,8 +5,12 @@ import { collection, doc, onSnapshot, addDoc, deleteDoc, query, orderBy, limit }
 import { 
     IoFlowerOutline, IoTimeOutline, IoTrashOutline, IoAddCircleOutline,
     IoWaterOutline, IoMoonOutline, IoCafeOutline, IoHeartOutline,
-    IoScaleOutline, IoTrendingUpOutline, IoMaleOutline, IoFemaleOutline
+    IoScaleOutline, IoTrendingUpOutline, IoMaleOutline, IoFemaleOutline,
+    IoSparklesOutline, IoCheckmarkCircleOutline, IoAlertCircleOutline,
+    IoChevronBackOutline, IoChevronForwardOutline, IoExtensionPuzzleOutline,
+    IoGameControllerOutline
 } from 'react-icons/io5';
+import { BABY_MILESTONES, BabyMilestone, computeBabyAgeDetails } from '@/lib/babyMilestones';
 
 interface JournalEntry {
     id: string;
@@ -23,6 +27,7 @@ interface GrowthEntry {
     ageMonths: number;
     weight: number; // kg
     height: number; // cm
+    headCircumference?: number; // cm
     timestamp: string;
     notes?: string;
 }
@@ -153,7 +158,8 @@ export default function BabyCareJournal() {
     const [user, setUser] = useState<any>(null);
     const [resolvedUid, setResolvedUid] = useState<string>('');
     const [profile, setProfile] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<'journal' | 'growth'>('journal');
+    const [activeTab, setActiveTab] = useState<'journal' | 'growth' | 'milestones'>('journal');
+    const [selectedMilestoneMonth, setSelectedMilestoneMonth] = useState<number>(0);
     
     // Tab 1 States (Journal Logs)
     const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -170,6 +176,7 @@ export default function BabyCareJournal() {
     const [growthAge, setGrowthAge] = useState<number>(3); // 3 months default
     const [growthWeight, setGrowthWeight] = useState<number>(6.0); // kg
     const [growthHeight, setGrowthHeight] = useState<number>(60.0); // cm
+    const [growthHead, setGrowthHead] = useState<number | string>(''); // cm
     const [growthNotes, setGrowthNotes] = useState('');
     const [submittingGrowth, setSubmittingGrowth] = useState(false);
 
@@ -188,6 +195,13 @@ export default function BabyCareJournal() {
                     if (d.exists()) {
                         const data = d.data();
                         setProfile(data);
+                        if (data.babyInfo?.dob) {
+                            const bAge = computeBabyAgeDetails(data.babyInfo.dob);
+                            setSelectedMilestoneMonth(Math.min(24, Math.max(0, bAge.months)));
+                            if (bAge.months <= 12) setGrowthAge(bAge.months);
+                            if (data.babyInfo?.gender === 'female') setGrowthGender('girl');
+                            else if (data.babyInfo?.gender === 'male') setGrowthGender('boy');
+                        }
                         // Partner sync active: If role is partner and partnerUid is assigned, redirect reads/writes
                         if (data.syncRole === 'partner' && data.partnerUid) {
                             targetUid = data.partnerUid;
@@ -283,10 +297,14 @@ export default function BabyCareJournal() {
             timestamp: new Date().toISOString(),
             notes: growthNotes.trim()
         };
+        if (growthHead && Number(growthHead) > 0) {
+            payload.headCircumference = Number(growthHead);
+        }
 
         try {
             await addDoc(collection(db, "users", dbUid, "baby_growth"), payload);
             setGrowthNotes('');
+            setGrowthHead('');
         } catch (err: any) {
             alert("Lỗi lưu chỉ số tăng trưởng: " + err.message);
         } finally {
@@ -391,6 +409,12 @@ export default function BabyCareJournal() {
                     className={`journal-tab-btn ${activeTab === 'growth' ? 'active' : ''}`}
                 >
                     <IoTrendingUpOutline size={18} /> Tăng trưởng WHO
+                </button>
+                <button 
+                    onClick={() => setActiveTab('milestones')} 
+                    className={`journal-tab-btn ${activeTab === 'milestones' ? 'active' : ''}`}
+                >
+                    <IoSparklesOutline size={18} /> Cột mốc phát triển & EASY
                 </button>
             </div>
 
@@ -578,7 +602,7 @@ export default function BabyCareJournal() {
                         </div>
                     </div>
                 </>
-            ) : (
+            ) : activeTab === 'growth' ? (
                 /* WHO Growth Tracker Tab UI */
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '24px', alignItems: 'start' }} className="journal-layout-grid animate-fade-in">
                     
@@ -659,6 +683,20 @@ export default function BabyCareJournal() {
                                             max="120"
                                             value={growthHeight}
                                             onChange={(e) => setGrowthHeight(Number(e.target.value))}
+                                            className="form-input"
+                                        />
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <span className="text-label">Vòng đầu (cm)</span>
+                                        <input 
+                                            type="number" 
+                                            step="0.1"
+                                            min="20"
+                                            max="65"
+                                            placeholder="Tùy chọn"
+                                            value={growthHead}
+                                            onChange={(e) => setGrowthHead(e.target.value)}
                                             className="form-input"
                                         />
                                     </div>
@@ -786,6 +824,7 @@ export default function BabyCareJournal() {
                                                 <div>
                                                     <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
                                                         {item.ageMonths} tháng tuổi • Cân: {item.weight}kg • Cao: {item.height}cm
+                                                        {item.headCircumference ? ` • Vòng đầu: ${item.headCircumference}cm` : ''}
                                                     </div>
                                                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '4px' }}>
                                                         <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>📅 {dateStr}</span>
@@ -825,6 +864,228 @@ export default function BabyCareJournal() {
                         )}
                     </div>
 
+                </div>
+            ) : (
+                /* Cột mốc phát triển (Milestones) & EASY Tab UI */
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {/* Month Picker Bar */}
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '24px',
+                        padding: '16px 20px',
+                        border: '1px solid #f1f5f9',
+                        boxShadow: 'var(--shadow-soft)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <IoSparklesOutline size={20} color="#7c3aed" />
+                                <strong style={{ fontSize: '0.95rem', color: '#1e293b' }}>Chọn mốc tuổi phát triển của bé:</strong>
+                            </div>
+                            {profile?.babyInfo?.dob && (
+                                <button
+                                    onClick={() => {
+                                        const bAge = computeBabyAgeDetails(profile.babyInfo.dob);
+                                        setSelectedMilestoneMonth(Math.min(24, Math.max(0, bAge.months)));
+                                    }}
+                                    style={{
+                                        border: 'none',
+                                        background: '#f5f3ff',
+                                        color: '#7c3aed',
+                                        padding: '4px 12px',
+                                        borderRadius: '12px',
+                                        fontSize: '0.78rem',
+                                        fontWeight: 700,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    🌟 Xem mốc tháng của bé ({computeBabyAgeDetails(profile.babyInfo.dob).months} tháng)
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Month Pills */}
+                        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
+                            {Object.values(BABY_MILESTONES).map((m) => {
+                                const isSelected = m.month === selectedMilestoneMonth;
+                                const isBabyCurrent = profile?.babyInfo?.dob && computeBabyAgeDetails(profile.babyInfo.dob).months === m.month;
+                                return (
+                                    <button
+                                        key={m.month}
+                                        onClick={() => setSelectedMilestoneMonth(m.month)}
+                                        style={{
+                                            flex: '0 0 auto',
+                                            padding: '8px 16px',
+                                            borderRadius: '14px',
+                                            border: '1.5px solid',
+                                            borderColor: isSelected ? '#7c3aed' : (isBabyCurrent ? '#c4b5fd' : '#e2e8f0'),
+                                            background: isSelected ? '#7c3aed' : (isBabyCurrent ? '#ede9fe' : 'white'),
+                                            color: isSelected ? 'white' : (isBabyCurrent ? '#6d28d9' : '#475569'),
+                                            fontWeight: 700,
+                                            fontSize: '0.82rem',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        {m.month === 0 ? 'Sơ sinh (0m)' : `${m.month} tháng`}
+                                        {isBabyCurrent && !isSelected && (
+                                            <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#7c3aed' }} />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Milestone Detail Card */}
+                    {(() => {
+                        const m = BABY_MILESTONES[selectedMilestoneMonth] || BABY_MILESTONES[0];
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                {/* Hero Card */}
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+                                    borderRadius: '24px',
+                                    padding: '24px',
+                                    color: 'white',
+                                    boxShadow: '0 12px 30px -8px rgba(139, 92, 246, 0.4)'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                                        <div>
+                                            <span style={{ background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                                {m.month === 0 ? 'Mốc 0 - 1 tháng' : `Mốc ${m.month} tháng tuổi`}
+                                            </span>
+                                            <h2 style={{ margin: '10px 0 6px 0', fontSize: '1.35rem', fontWeight: 900 }}>
+                                                {m.title}
+                                            </h2>
+                                        </div>
+                                    </div>
+                                    <p style={{ margin: '8px 0 0 0', opacity: 0.95, fontSize: '0.88rem', lineHeight: 1.55 }}>
+                                        {m.headline}
+                                    </p>
+                                </div>
+
+                                {/* EASY Routine Card */}
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+                                    border: '1.5px solid #a7f3d0',
+                                    borderRadius: '24px',
+                                    padding: '22px',
+                                    boxShadow: 'var(--shadow-soft)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#065f46', fontWeight: 900, fontSize: '1.02rem' }}>
+                                            <IoMoonOutline size={22} color="#059669" />
+                                            <span>Khuyến nghị nhịp sinh hoạt: {m.easyRoutine.name}</span>
+                                        </div>
+                                        <span style={{ fontSize: '0.72rem', background: '#d1fae5', color: '#047857', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
+                                            Phương pháp E.A.S.Y
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                                        <div style={{ background: 'white', padding: '12px 14px', borderRadius: '16px', border: '1px solid #d1fae5' }}>
+                                            <div style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 600 }}>⏱️ Thời gian thức (Wake Window)</div>
+                                            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#065f46', marginTop: '4px' }}>{m.easyRoutine.wakeWindow}</div>
+                                        </div>
+                                        <div style={{ background: 'white', padding: '12px 14px', borderRadius: '16px', border: '1px solid #d1fae5' }}>
+                                            <div style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 600 }}>💤 Số giấc ngủ ngày</div>
+                                            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#065f46', marginTop: '4px' }}>{m.easyRoutine.napCount}</div>
+                                        </div>
+                                        <div style={{ background: 'white', padding: '12px 14px', borderRadius: '16px', border: '1px solid #d1fae5' }}>
+                                            <div style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 600 }}>🌙 Giấc ngủ đêm</div>
+                                            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#065f46', marginTop: '4px' }}>{m.easyRoutine.nightSleep}</div>
+                                        </div>
+                                    </div>
+
+                                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#047857', lineHeight: 1.5, background: 'rgba(255,255,255,0.7)', padding: '10px 14px', borderRadius: '14px' }}>
+                                        💡 <strong>Lời khuyên nếp sinh hoạt & dinh dưỡng:</strong> {m.easyRoutine.description} • {m.feedingSleep}
+                                    </p>
+                                </div>
+
+                                {/* 4 Milestone Domains Grid */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                                    {/* 1. Gross Motor */}
+                                    <div style={{ background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #f1f5f9', boxShadow: 'var(--shadow-soft)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#047857', fontWeight: 800, fontSize: '0.95rem', marginBottom: '12px' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>🏃</span> Vận động thô (Gross Motor)
+                                        </div>
+                                        <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {m.motorGross.map((item, idx) => (
+                                                <li key={idx} style={{ fontSize: '0.82rem', color: '#334155', lineHeight: 1.45 }}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    {/* 2. Fine Motor */}
+                                    <div style={{ background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #f1f5f9', boxShadow: 'var(--shadow-soft)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0369a1', fontWeight: 800, fontSize: '0.95rem', marginBottom: '12px' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>🖐️</span> Vận động tinh (Fine Motor)
+                                        </div>
+                                        <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {m.motorFine.map((item, idx) => (
+                                                <li key={idx} style={{ fontSize: '0.82rem', color: '#334155', lineHeight: 1.45 }}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    {/* 3. Sensory & Cognitive */}
+                                    <div style={{ background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #f1f5f9', boxShadow: 'var(--shadow-soft)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b45309', fontWeight: 800, fontSize: '0.95rem', marginBottom: '12px' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>🧠</span> Giác quan & Nhận thức
+                                        </div>
+                                        <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {m.sensoryCognitive.map((item, idx) => (
+                                                <li key={idx} style={{ fontSize: '0.82rem', color: '#334155', lineHeight: 1.45 }}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    {/* 4. Language & Social */}
+                                    <div style={{ background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #f1f5f9', boxShadow: 'var(--shadow-soft)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#be185d', fontWeight: 800, fontSize: '0.95rem', marginBottom: '12px' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>💬</span> Giao tiếp & Cảm xúc
+                                        </div>
+                                        <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {m.socialLanguage.map((item, idx) => (
+                                                <li key={idx} style={{ fontSize: '0.82rem', color: '#334155', lineHeight: 1.45 }}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                {/* Play Tips & Red Flags */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                                    {/* Play Tips */}
+                                    <div style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)', borderRadius: '22px', padding: '20px', border: '1.5px solid #ddd6fe' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6d28d9', fontWeight: 800, fontSize: '0.95rem', marginBottom: '12px' }}>
+                                            <IoGameControllerOutline size={20} color="#7c3aed" /> Gợi ý trò chơi tương tác phát triển trí não
+                                        </div>
+                                        <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {m.playTips.map((tip, idx) => (
+                                                <li key={idx} style={{ fontSize: '0.82rem', color: '#4c1d95', lineHeight: 1.45 }}>{tip}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    {/* Red Flags */}
+                                    <div style={{ background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)', borderRadius: '22px', padding: '20px', border: '1.5px solid #fecdd3' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#be123c', fontWeight: 800, fontSize: '0.95rem', marginBottom: '12px' }}>
+                                            <IoAlertCircleOutline size={20} color="#e11d48" /> Dấu hiệu cờ đỏ cần theo dõi (Red Flags)
+                                        </div>
+                                        <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {m.redFlags.map((flag, idx) => (
+                                                <li key={idx} style={{ fontSize: '0.82rem', color: '#9f1239', lineHeight: 1.45 }}>{flag}</li>
+                                            ))}
+                                        </ul>
+                                        <p style={{ margin: '12px 0 0 0', fontSize: '0.74rem', color: '#881337', fontStyle: 'italic', lineHeight: 1.4 }}>
+                                            * Lưu ý: Mỗi bé có tốc độ phát triển riêng. Nếu bé xuất hiện từ 2 dấu hiệu trên hoặc ba mẹ cảm thấy lo lắng, hãy tham khảo ý kiến bác sĩ nhi khoa.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 
@@ -896,7 +1157,7 @@ export default function BabyCareJournal() {
                 /* Multi-column grid for growth numbers */
                 .growth-form-row {
                     display: grid;
-                    grid-template-columns: 1fr 1fr 1fr;
+                    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
                     gap: 12px;
                 }
 

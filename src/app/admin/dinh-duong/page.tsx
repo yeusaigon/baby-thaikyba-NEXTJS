@@ -2,14 +2,15 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { 
-    collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit, serverTimestamp, getDoc 
+    collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit, serverTimestamp, getDoc, setDoc 
 } from 'firebase/firestore';
 import { 
     IoRestaurantOutline, IoSearchOutline, IoAddCircleOutline, IoCloseOutline, 
     IoTrashOutline, IoPencilOutline, IoFlameOutline, IoCheckmarkCircleOutline, 
     IoWarningOutline, IoCloseCircleOutline, IoCalendarOutline, IoCafeOutline, 
     IoPulseOutline, IoSadOutline, IoLeafOutline, IoFlame, IoFastFoodOutline,
-    IoMedicalOutline, IoShieldCheckmarkOutline
+    IoMedicalOutline, IoShieldCheckmarkOutline, IoWaterOutline, IoSparklesOutline,
+    IoHeartOutline, IoAlertCircleOutline
 } from 'react-icons/io5';
 
 import { FOOD_DB } from '@/lib/data';
@@ -380,7 +381,8 @@ export default function NutritionPage() {
     const [user, setUser] = useState<any>(null);
     const [profile, setProfile] = useState<any>({});
     const [resolvedUid, setResolvedUid] = useState<string>('');
-    const [activeTab, setActiveTab] = useState<'lookup' | 'guide' | 'medical' | 'diary'>('lookup');
+    const [activeTab, setActiveTab] = useState<'lookup' | 'guide' | 'medical' | 'diary' | 'postpartum'>('lookup');
+    const [waterGlasses, setWaterGlasses] = useState(0);
     
     // Lookup state
     const [searchKeyword, setSearchKeyword] = useState('');
@@ -461,6 +463,7 @@ export default function NutritionPage() {
 
         let unsubDb: (() => void) | null = null;
         let unsubProfile: (() => void) | null = null;
+        let unsubWater: (() => void) | null = null;
 
         const unsubscribe = auth.onAuthStateChanged((currentUser) => {
             if (currentUser) {
@@ -472,6 +475,9 @@ export default function NutritionPage() {
                     if (d.exists()) {
                         const data = d.data();
                         setProfile(data);
+                        if (data.appMode === 'postpartum') {
+                            setActiveTab(prev => prev === 'lookup' ? 'postpartum' : prev);
+                        }
                         
                         // Load height / weight settings into preHeight/preWeight if available
                         if (data.height) setPreHeight(data.height);
@@ -506,6 +512,17 @@ export default function NutritionPage() {
                         const list = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
                         setMeals(list);
                     });
+
+                    // Realtime listen daily water intake
+                    if (unsubWater) unsubWater();
+                    const todayDateStr = new Date().toISOString().split('T')[0];
+                    unsubWater = onSnapshot(doc(db, "users", targetUid, "daily_water", todayDateStr), (snap) => {
+                        if (snap.exists()) {
+                            setWaterGlasses(snap.data().count || 0);
+                        } else {
+                            setWaterGlasses(0);
+                        }
+                    });
                 });
             } else {
                 setUser(null);
@@ -516,8 +533,25 @@ export default function NutritionPage() {
             unsubscribe();
             if (unsubDb) unsubDb();
             if (unsubProfile) unsubProfile();
+            if (unsubWater) unsubWater();
         };
     }, []);
+
+    const handleUpdateWater = async (delta: number) => {
+        const targetUid = resolvedUid || user?.uid;
+        if (!targetUid) return;
+        const todayDateStr = new Date().toISOString().split('T')[0];
+        const newCount = Math.max(0, Math.min(20, waterGlasses + delta));
+        setWaterGlasses(newCount);
+        try {
+            await setDoc(doc(db, "users", targetUid, "daily_water", todayDateStr), {
+                count: newCount,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+        } catch (e) {
+            console.error("Error saving water intake:", e);
+        }
+    };
 
     const calculatedTrimester = useMemo(() => {
         if (!profile?.lmp) return null;
@@ -829,7 +863,7 @@ export default function NutritionPage() {
                     </div>
                 </div>
 
-                <div className="segmented-control">
+                <div className="segmented-control" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     <button onClick={() => setActiveTab('lookup')} className={`segment-btn ${activeTab === 'lookup' ? 'active' : ''}`}>
                         Tra cứu
                     </button>
@@ -841,6 +875,13 @@ export default function NutritionPage() {
                     </button>
                     <button onClick={() => setActiveTab('diary')} className={`segment-btn ${activeTab === 'diary' ? 'active' : ''}`}>
                         Nhật ký
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('postpartum')} 
+                        className={`segment-btn ${activeTab === 'postpartum' ? 'active' : ''}`}
+                        style={{ color: activeTab === 'postpartum' ? '#059669' : undefined, fontWeight: 700 }}
+                    >
+                        🍼 Sau sinh & Lợi sữa
                     </button>
                 </div>
 
@@ -1096,6 +1137,282 @@ export default function NutritionPage() {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'postpartum' && (
+                    <div id="view-postpartum" className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* 1. Header Banner */}
+                        <div style={{
+                            background: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #14b8a6 100%)',
+                            borderRadius: '24px',
+                            padding: '24px',
+                            color: 'white',
+                            boxShadow: '0 12px 30px -8px rgba(16, 185, 129, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '16px'
+                        }}>
+                            <div>
+                                <span style={{ background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                    Hậu sản & Nuôi con bằng sữa mẹ
+                                </span>
+                                <h2 style={{ margin: '10px 0 6px 0', fontSize: '1.35rem', fontWeight: 900 }}>
+                                    Dinh Dưỡng Hồi Phục & Gọi Sữa Mẹ
+                                </h2>
+                                <p style={{ margin: 0, opacity: 0.95, fontSize: '0.88rem', lineHeight: 1.5, maxWidth: '650px' }}>
+                                    Dinh dưỡng khoa học giúp mẹ nhanh lành vết thương, phục hồi khí huyết và kích hoạt phản xạ tiết sữa dồi dào, sánh đặc cho bé yêu.
+                                </p>
+                            </div>
+                            <div style={{ background: 'rgba(255,255,255,0.2)', padding: '16px', borderRadius: '50%', display: 'flex' }}>
+                                <IoHeartOutline size={36} color="white" />
+                            </div>
+                        </div>
+
+                        {/* 2. Hydration Tracker Card */}
+                        <div style={{
+                            background: 'white',
+                            borderRadius: '24px',
+                            padding: '24px',
+                            border: '1px solid #f1f5f9',
+                            boxShadow: 'var(--shadow-soft)'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ background: '#e0f2fe', color: '#0284c7', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <IoWaterOutline size={20} />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#1e293b' }}>
+                                                Nhật Ký Uống Nước Trong Ngày
+                                            </h3>
+                                            <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                                                Mục tiêu cho mẹ sữa: 2,500 - 3,000 ml (10 - 12 ly 250ml/ngày)
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <button
+                                        onClick={() => handleUpdateWater(-1)}
+                                        disabled={waterGlasses <= 0}
+                                        style={{
+                                            width: '38px',
+                                            height: '38px',
+                                            borderRadius: '12px',
+                                            border: '1.5px solid #cbd5e1',
+                                            background: 'white',
+                                            color: '#475569',
+                                            fontWeight: 800,
+                                            fontSize: '1.1rem',
+                                            cursor: waterGlasses <= 0 ? 'not-allowed' : 'pointer',
+                                            opacity: waterGlasses <= 0 ? 0.4 : 1
+                                        }}
+                                    >
+                                        -
+                                    </button>
+                                    <div style={{ textAlign: 'center', minWidth: '80px' }}>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0284c7' }}>
+                                            {waterGlasses * 250} <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>ml</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                                            {waterGlasses} / 12 ly
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleUpdateWater(1)}
+                                        style={{
+                                            padding: '8px 16px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: '#0284c7',
+                                            color: 'white',
+                                            fontWeight: 700,
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            boxShadow: '0 4px 10px rgba(2, 132, 199, 0.25)'
+                                        }}
+                                    >
+                                        <IoWaterOutline size={16} /> +1 Ly (250ml)
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Progress bar */}
+                            <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden', marginBottom: '12px' }}>
+                                <div style={{
+                                    height: '100%',
+                                    width: `${Math.min(100, Math.round((waterGlasses / 12) * 100))}%`,
+                                    background: waterGlasses >= 10 ? 'linear-gradient(90deg, #10b981, #059669)' : 'linear-gradient(90deg, #38bdf8, #0284c7)',
+                                    borderRadius: '6px',
+                                    transition: 'width 0.3s ease'
+                                }} />
+                            </div>
+
+                            {/* Glass pills */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                                {[...Array(12)].map((_, i) => {
+                                    const isFilled = i < waterGlasses;
+                                    return (
+                                        <div
+                                            key={i}
+                                            onClick={() => handleUpdateWater(isFilled && i === waterGlasses - 1 ? -1 : 1)}
+                                            style={{
+                                                flex: '1 1 50px',
+                                                padding: '8px 4px',
+                                                borderRadius: '10px',
+                                                textAlign: 'center',
+                                                background: isFilled ? '#e0f2fe' : '#f8fafc',
+                                                border: '1.5px solid',
+                                                borderColor: isFilled ? '#38bdf8' : '#e2e8f0',
+                                                color: isFilled ? '#0369a1' : '#94a3b8',
+                                                fontSize: '0.72rem',
+                                                fontWeight: 700,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            {isFilled ? '💧 Ly ' + (i + 1) : '○ ' + (i + 1)}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <p style={{ margin: 0, fontSize: '0.78rem', color: '#0369a1', background: '#f0f9ff', padding: '10px 14px', borderRadius: '12px', lineHeight: 1.45 }}>
+                                💡 <strong>Mẹo chuyên gia:</strong> Sữa mẹ có trên 88% thành phần là nước. Uống 1 ly nước ấm (hoặc trà gạo lứt/sữa hạt) 15-20 phút trước khi cho con ti hoặc hút sữa sẽ giúp kích thích hormone Oxytocin hỗ trợ phản xạ xuống sữa nhanh và êm ái hơn.
+                            </p>
+                        </div>
+
+                        {/* 3. Galactagogues: Thực phẩm vàng Lợi Sữa */}
+                        <div>
+                            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <IoSparklesOutline size={20} color="#10b981" /> Top Thực Phẩm Vàng Kích Thích Tiết Sữa
+                            </h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                                <div style={{ background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #f1f5f9', boxShadow: 'var(--shadow-soft)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#047857', fontWeight: 800, fontSize: '0.92rem', marginBottom: '10px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>🥬</span> Rau củ lợi sữa truyền thống
+                                    </div>
+                                    <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.8rem', color: '#334155', lineHeight: 1.45 }}>
+                                        <li><strong>Đu đủ xanh hầm sườn:</strong> Giàu enzyme papain, vitamin A, B, C, kích thích tuyến sữa hoạt động mạnh mẽ.</li>
+                                        <li><strong>Rau ngót nấu thịt nạc:</strong> Vừa làm sạch sản dịch, co hồi tử cung, vừa dồi dào canxi, phốt pho, vitamin C.</li>
+                                        <li><strong>Hoa chuối luộc/hầm:</strong> Giàu ethanol tự nhiên chống nhiễm trùng và tăng prolactin kích sữa.</li>
+                                        <li><strong>Rau thì là & mồng tơi:</strong> Hợp chất phytoestrogen tự nhiên kích thích dòng sữa chảy đều.</li>
+                                    </ul>
+                                </div>
+
+                                <div style={{ background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #f1f5f9', boxShadow: 'var(--shadow-soft)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b45309', fontWeight: 800, fontSize: '0.92rem', marginBottom: '10px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>🌾</span> Hạt & Ngũ cốc nguyên cám
+                                    </div>
+                                    <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.8rem', color: '#334155', lineHeight: 1.45 }}>
+                                        <li><strong>Yến mạch nguyên cám:</strong> Chứa beta-glucan giúp tăng nồng độ hormone prolactin tiết sữa.</li>
+                                        <li><strong>Mè đen (Vừng đen):</strong> Nguồn canxi và chất béo thực vật lành mạnh giúp sữa đặc và thơm ngậy.</li>
+                                        <li><strong>Hạt chia & Hạt lanh:</strong> Cung cấp axit béo Omega-3 (ALA) hỗ trợ hệ thần kinh cho trẻ sơ sinh.</li>
+                                        <li><strong>Hạnh nhân & Óc chó:</strong> Giàu vitamin E, kẽm và protein lành mạnh giúp mẹ no lâu, kiểm soát cân nặng.</li>
+                                    </ul>
+                                </div>
+
+                                <div style={{ background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #f1f5f9', boxShadow: 'var(--shadow-soft)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0369a1', fontWeight: 800, fontSize: '0.92rem', marginBottom: '10px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>🍵</span> Thức uống thảo mộc lành tính
+                                    </div>
+                                    <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.8rem', color: '#334155', lineHeight: 1.45 }}>
+                                        <li><strong>Nước chè vằng ấm:</strong> Kháng viêm sau sinh, co bóp tử cung, giải độc gan và mát sữa.</li>
+                                        <li><strong>Nước gạo lứt rang:</strong> Thanh lọc cơ thể, giúp sữa thơm ngọt, mẹ ngủ sâu giấc hơn.</li>
+                                        <li><strong>Sữa tươi ấm / Sữa hạt:</strong> Cung cấp năng lượng tức thì trước và sau mỗi cữ vắt sữa.</li>
+                                        <li><strong>Nước đậu đen xanh lòng rang:</strong> Bổ sung sắt, giải nhiệt và làm mát cơ thể cho mẹ bỉm.</li>
+                                    </ul>
+                                </div>
+
+                                <div style={{ background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #f1f5f9', boxShadow: 'var(--shadow-soft)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#be185d', fontWeight: 800, fontSize: '0.92rem', marginBottom: '10px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>🥩</span> Nguồn đạm hồi phục thể lực
+                                    </div>
+                                    <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.8rem', color: '#334155', lineHeight: 1.45 }}>
+                                        <li><strong>Cá hồi áp chảo:</strong> Giàu DHA, EPA tinh khiết chuyển hóa trực tiếp vào sữa giúp phát triển võng mạc và não bộ bé.</li>
+                                        <li><strong>Thịt bò nạc:</strong> Dồi dào sắt sinh học và kẽm, bù đắp lượng máu mất sau vượt cạn.</li>
+                                        <li><strong>Trứng gà ta:</strong> Nguồn choline và protein hoàn chỉnh có hoạt tính sinh học cao nhất.</li>
+                                        <li><strong>Tôm đồng & Tép sông:</strong> Cung cấp canxi hữu cơ dồi dào, xương chắc khỏe.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 4. Foods to Avoid */}
+                        <div style={{
+                            background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
+                            border: '1.5px solid #fecdd3',
+                            borderRadius: '24px',
+                            padding: '24px',
+                            boxShadow: 'var(--shadow-soft)'
+                        }}>
+                            <h3 style={{ margin: '0 0 14px 0', fontSize: '1.05rem', fontWeight: 800, color: '#be123c', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <IoAlertCircleOutline size={22} color="#e11d48" /> Thực Phẩm Cần Tránh Hoặc Hạn Chế Khi Cho Con Bú
+                            </h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '14px' }}>
+                                <div style={{ background: 'white', padding: '14px 16px', borderRadius: '16px', border: '1px solid #fda4af' }}>
+                                    <strong style={{ display: 'block', fontSize: '0.85rem', color: '#9f1239', marginBottom: '6px' }}>🚫 Nhóm có nguy cơ gây tiêu sữa / mất sữa:</strong>
+                                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#881337', lineHeight: 1.45 }}>
+                                        Lá lốt, rau răm, măng tươi, măng chua, bạc hà cay nồng độ cao, mùi tây ăn sống lượng lớn.
+                                    </p>
+                                </div>
+
+                                <div style={{ background: 'white', padding: '14px 16px', borderRadius: '16px', border: '1px solid #fda4af' }}>
+                                    <strong style={{ display: 'block', fontSize: '0.85rem', color: '#9f1239', marginBottom: '6px' }}>⚠️ Nhóm dễ làm bé đầy hơi, quấy khóc:</strong>
+                                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#881337', lineHeight: 1.45 }}>
+                                        Gia vị cay nồng (ớt, tiêu nồng độ cao), đồ ăn lên men sống chưa tiệt trùng, bắp cải sống, đồ chiên rán ngập dầu mỡ cháy khét.
+                                    </p>
+                                </div>
+
+                                <div style={{ background: 'white', padding: '14px 16px', borderRadius: '16px', border: '1px solid #fda4af' }}>
+                                    <strong style={{ display: 'block', fontSize: '0.85rem', color: '#9f1239', marginBottom: '6px' }}>☕ Chất kích thích & Cồn:</strong>
+                                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#881337', lineHeight: 1.45 }}>
+                                        Rượu, bia (tuyệt đối kiêng), nước tăng lực. Cà phê và trà đặc nên hạn chế (không quá 200mg caffeine/ngày và uống ngay sau cữ bú để đào thải kịp).
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 5. Sample Daily Routine */}
+                        <div style={{
+                            background: 'white',
+                            borderRadius: '24px',
+                            padding: '24px',
+                            border: '1px solid #f1f5f9',
+                            boxShadow: 'var(--shadow-soft)'
+                        }}>
+                            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.05rem', fontWeight: 800, color: '#1e293b' }}>
+                                📋 Gợi Ý Lịch Cữ Ăn Lợi Sữa Trong Ngày Cho Mẹ
+                            </h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {[
+                                    { time: '07:00 - Bữa Sáng', meal: 'Cháo yến mạch thịt bò bằm / Phở gà nạc + 1 ly sữa hạt hạnh nhân ấm 250ml', tag: 'Năng lượng khởi đầu' },
+                                    { time: '09:30 - Bữa Phụ Sáng', meal: '1 quả chuối chín / nửa quả bơ dầm sữa chua + 1 ly nước ấm 300ml', tag: 'Bổ sung khoáng chất' },
+                                    { time: '12:00 - Bữa Trưa', meal: 'Cơm gạo lứt/trắng + Cá hồi áp chảo + Canh đu đủ xanh sườn nạc + Tráng miệng đu đủ chín', tag: 'Bữa chính cân bằng' },
+                                    { time: '15:30 - Bữa Phụ Chiều', meal: 'Sữa chua không đường rắc hạt chia + 1 ly nước chè vằng hoặc gạo lứt rang ấm', tag: 'Kích thích dòng sữa chiều' },
+                                    { time: '18:30 - Bữa Tối', meal: 'Cơm nóng + Tôm sông rim + Canh rau ngót nấu thịt bằm + Đĩa rau củ luộc', tag: 'Dễ tiêu hóa, bổ khí huyết' },
+                                    { time: '21:30 - Bữa Phụ Đêm', meal: '1 ly sữa tươi tiệt trùng ấm hoặc bột ngũ cốc hạt ấm trước giờ đi ngủ', tag: 'Nuôi dưỡng sữa cữ đêm' }
+                                ].map((item, idx) => (
+                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#fafafa', borderRadius: '16px', border: '1px solid #f1f5f9', flexWrap: 'wrap', gap: '8px' }}>
+                                        <div>
+                                            <strong style={{ fontSize: '0.85rem', color: '#047857' }}>{item.time}</strong>
+                                            <div style={{ fontSize: '0.8rem', color: '#334155', marginTop: '2px' }}>{item.meal}</div>
+                                        </div>
+                                        <span style={{ fontSize: '0.72rem', background: '#ecfdf5', color: '#059669', padding: '3px 10px', borderRadius: '10px', fontWeight: 700 }}>
+                                            {item.tag}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>

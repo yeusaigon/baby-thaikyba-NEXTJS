@@ -1,8 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
-import { collection, doc, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, orderBy, limit, setDoc } from 'firebase/firestore';
 import { getDataForWeek, PregnancyWeekData } from '@/lib/data';
+import { computeBabyAgeDetails, getMilestoneForAge, BABY_MILESTONES, BabyMilestone } from '@/lib/babyMilestones';
+import { DEFAULT_VACCINES } from '@/app/admin/tiem-chung/page';
 
 import { QUOTES } from '@/lib/quotes';
 import Link from 'next/link';
@@ -11,7 +13,9 @@ import {
     IoRestaurantOutline, IoAddOutline, IoLogoGoogle, IoCall,
     IoHeartOutline, IoSparklesOutline,
     IoWalletOutline,
-    IoPulseOutline, IoFootstepsOutline, IoWarningOutline, IoCloseOutline, IoSettingsOutline
+    IoPulseOutline, IoFootstepsOutline, IoWarningOutline, IoCloseOutline, IoSettingsOutline,
+    IoTimeOutline, IoWaterOutline, IoCafeOutline, IoMoonOutline, IoScaleOutline, IoTrendingUpOutline,
+    IoChevronBackOutline, IoChevronForwardOutline, IoFlowerOutline, IoMedicalOutline, IoShieldCheckmarkOutline
 } from 'react-icons/io5';
 
 const getTimeMillis = (value: any) => {
@@ -52,6 +56,18 @@ export default function AdminDashboard() {
     const [latestBP, setLatestBP] = useState<any>(null);
     const [latestBS, setLatestBS] = useState<any>(null);
     const [latestKick, setLatestKick] = useState<any>(null);
+
+    // Postpartum / Nuôi con States
+    const [babyJournalToday, setBabyJournalToday] = useState<{
+        breastMins: number;
+        bottleMl: number;
+        wetDiapers: number;
+        dirtyDiapers: number;
+        sleepHours: string;
+    }>({ breastMins: 0, bottleMl: 0, wetDiapers: 0, dirtyDiapers: 0, sleepHours: '0.0' });
+    const [latestGrowth, setLatestGrowth] = useState<any>(null);
+    const [immunizations, setImmunizations] = useState<any[]>([]);
+    const [activeMilestoneMonth, setActiveMilestoneMonth] = useState<number>(0);
 
     // PWA Install States
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -223,6 +239,40 @@ export default function AdminDashboard() {
             }
         });
 
+        // 7. Lắng nghe Nhật ký bé (baby_journal)
+        const qBabyJournal = query(collection(db, "users", user.uid, "baby_journal"), orderBy("timestamp", "desc"), limit(50));
+        const unsubBabyJournal = onSnapshot(qBabyJournal, (snapshot) => {
+            const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            const todayStr = new Date().toDateString();
+            const todayList = list.filter((e: any) => e.timestamp && new Date(e.timestamp).toDateString() === todayStr);
+
+            const breastMins = todayList.filter((e: any) => e.type === 'milk_breast').reduce((sum: number, e: any) => sum + (e.duration || 0), 0);
+            const bottleMl = todayList.filter((e: any) => e.type === 'milk_bottle').reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
+            const wetDiapers = todayList.filter((e: any) => e.type === 'diaper_wet').length;
+            const dirtyDiapers = todayList.filter((e: any) => e.type === 'diaper_dirty').length;
+            const sleepMins = todayList.filter((e: any) => e.type === 'sleep').reduce((sum: number, e: any) => sum + (e.duration || 0), 0);
+            const sleepHours = (sleepMins / 60).toFixed(1);
+
+            setBabyJournalToday({ breastMins, bottleMl, wetDiapers, dirtyDiapers, sleepHours });
+        });
+
+        // 8. Lắng nghe Chỉ số tăng trưởng bé (baby_growth)
+        const qBabyGrowth = query(collection(db, "users", user.uid, "baby_growth"), orderBy("timestamp", "desc"), limit(1));
+        const unsubBabyGrowth = onSnapshot(qBabyGrowth, (snapshot) => {
+            if (!snapshot.empty) {
+                setLatestGrowth(snapshot.docs[0].data());
+            } else {
+                setLatestGrowth(null);
+            }
+        });
+
+        // 9. Lắng nghe Sổ tiêm chủng (immunizations)
+        const qImms = query(collection(db, "users", user.uid, "immunizations"));
+        const unsubImms = onSnapshot(qImms, (snapshot) => {
+            const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            setImmunizations(list);
+        });
+
         return () => {
             unsubProfile();
             unsubVisits();
@@ -230,6 +280,9 @@ export default function AdminDashboard() {
             unsubFinance();
             unsubVitals();
             unsubKicks();
+            unsubBabyJournal();
+            unsubBabyGrowth();
+            unsubImms();
         };
     }, []);
 
@@ -315,6 +368,91 @@ export default function AdminDashboard() {
         .filter(v => v.nextDate && v.nextDate >= todayStr)
         .sort((a, b) => a.nextDate.localeCompare(b.nextDate))[0];
     const hasAllergy = profile.allergy && profile.allergy.toLowerCase() !== 'không';
+
+    // Postpartum mode variables & helpers
+    const isPostpartum = profile.appMode === 'postpartum';
+    const babyAge = profile.babyInfo?.dob ? computeBabyAgeDetails(profile.babyInfo.dob) : null;
+
+    useEffect(() => {
+        if (babyAge && babyAge.months !== undefined) {
+            setActiveMilestoneMonth(babyAge.months);
+        }
+    }, [profile.babyInfo?.dob]);
+
+    const currentMilestone = BABY_MILESTONES[activeMilestoneMonth] || getMilestoneForAge(activeMilestoneMonth);
+    const milestoneKeys = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24];
+
+    const handlePrevMilestone = () => {
+        const idx = milestoneKeys.indexOf(activeMilestoneMonth);
+        if (idx > 0) setActiveMilestoneMonth(milestoneKeys[idx - 1]);
+    };
+
+    const handleNextMilestone = () => {
+        const idx = milestoneKeys.indexOf(activeMilestoneMonth);
+        if (idx >= 0 && idx < milestoneKeys.length - 1) {
+            setActiveMilestoneMonth(milestoneKeys[idx + 1]);
+        }
+    };
+
+    const getNextUpcomingVaccine = () => {
+        if (!profile.babyInfo?.dob) return null;
+        const dob = new Date(profile.babyInfo.dob);
+        if (isNaN(dob.getTime())) return null;
+
+        const ageGroupToMonths: Record<string, number> = {
+            'Sơ sinh': 0,
+            '2 tháng': 2,
+            '3 tháng': 3,
+            '4 tháng': 4,
+            '6 tháng': 6,
+            '7 tháng': 7,
+            '9 tháng': 9,
+            '12 tháng': 12,
+            '18 tháng': 18,
+            '24 tháng': 24
+        };
+
+        const takenIds = new Set(
+            immunizations
+                .filter(im => im.status === 'completed' || im.status === 'done' || im.taken)
+                .map(im => im.id || im.vaccineId)
+        );
+
+        const now = new Date();
+        const candidateList = DEFAULT_VACCINES
+            .filter(v => ageGroupToMonths[v.ageGroup] !== undefined)
+            .filter(v => !takenIds.has(v.id))
+            .map(v => {
+                const m = ageGroupToMonths[v.ageGroup];
+                const targetDate = new Date(dob);
+                targetDate.setMonth(targetDate.getMonth() + m);
+                const diffDays = Math.ceil((targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                return {
+                    ...v,
+                    targetDate,
+                    targetDateStr: `${targetDate.getDate()}/${targetDate.getMonth() + 1}/${targetDate.getFullYear()}`,
+                    diffDays
+                };
+            })
+            .sort((a, b) => a.targetDate.getTime() - b.targetDate.getTime());
+
+        return candidateList[0] || null;
+    };
+    const nextVaccine = getNextUpcomingVaccine();
+
+    const handleToggleMode = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+        const nextMode = profile.appMode === 'postpartum' ? 'pregnancy' : 'postpartum';
+        try {
+            await setDoc(doc(db, "users", user.uid, "settings", "profile"), {
+                ...profile,
+                appMode: nextMode
+            }, { merge: true });
+        } catch (e) {
+            console.error("Lỗi chuyển chế độ:", e);
+        }
+    };
 
 
 
@@ -1078,14 +1216,48 @@ export default function AdminDashboard() {
             )}
 
             <div className="dashboard-flex-layout">
-                                                {/* 1. HỒ SƠ MẸ BẦU (HERO CARD PREMIUM) */}
-                <div className="hero-profile-premium fade-in">
+                {/* 1. HỒ SƠ MẸ BẦU HOẶC EM BÉ (HERO CARD PREMIUM) */}
+                <div className={`hero-profile-premium fade-in ${isPostpartum ? 'hero-postpartum' : ''}`}>
                     <div className="hero-top-section">
                         <div className="hero-greeting-area">
-                            <span className="hero-subtitle-apple">Hồ sơ mẹ bầu</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span className="hero-subtitle-apple">
+                                    {isPostpartum ? 'Hồ sơ em bé • Nuôi con' : 'Hồ sơ mẹ bầu • Thai kỳ'}
+                                </span>
+                                <button 
+                                    onClick={handleToggleMode}
+                                    style={{
+                                        background: isPostpartum ? 'rgba(236, 72, 153, 0.12)' : 'rgba(124, 58, 237, 0.1)',
+                                        color: isPostpartum ? '#db2777' : '#7c3aed',
+                                        border: '1px solid ' + (isPostpartum ? 'rgba(236, 72, 153, 0.25)' : 'rgba(124, 58, 237, 0.2)'),
+                                        padding: '4px 10px',
+                                        borderRadius: '12px',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 800,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    title="Nhấn để chuyển đổi chế độ"
+                                >
+                                    {isPostpartum ? 'Chuyển sang Thai kỳ 🤰' : 'Bé đã sinh? Chuyển sang Nuôi con 👩‍🍼'}
+                                </button>
+                            </div>
                             <h1 className="hero-name-premium">
-                                {profile.name || auth.currentUser?.displayName || 'Mẹ bầu xinh đẹp'}
+                                {isPostpartum
+                                    ? (profile.babyInfo?.name || 'Em bé đáng yêu')
+                                    : (profile.name || auth.currentUser?.displayName || 'Mẹ bầu xinh đẹp')}
                             </h1>
+                            {isPostpartum && (
+                                <div style={{ fontSize: '0.88rem', color: '#db2777', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
+                                    <span style={{ background: '#fdf2f8', padding: '2px 8px', borderRadius: '8px', border: '1px solid #fbcfe8' }}>
+                                        {profile.babyInfo?.gender === 'boy' ? '👦 Bé trai' : profile.babyInfo?.gender === 'twins' ? '👶👶 Sinh đôi' : '👧 Bé gái'}
+                                    </span>
+                                    <span>🎉 {babyAge ? babyAge.ageDisplay : 'Chưa cập nhật ngày sinh bé'}</span>
+                                </div>
+                            )}
                         </div>
 
                         <div className="hero-avatar-container" onClick={() => setShowProfileModal(true)}>
@@ -1104,22 +1276,358 @@ export default function AdminDashboard() {
 
                     <div className="hero-floating-dock">
                         <div className="dock-metrics">
-                            <div className="dock-metric-item">
-                                <div className="dock-label">
-                                    <IoPulseOutline size={14} /> Tuần thai
-                                </div>
-                                <div className="dock-value highlight-purple">Tuần {weeks}/40</div>
-                            </div>
-                            <div className="dock-metric-item">
-                                <div className="dock-label">
-                                    <IoCalendarOutline size={14} /> Dự sinh
-                                </div>
-                                <div className="dock-value highlight-pink">{eddStr}</div>
-                            </div>
+                            {isPostpartum ? (
+                                <>
+                                    <div className="dock-metric-item">
+                                        <div className="dock-label">
+                                            <IoScaleOutline size={14} /> Cân nặng bé
+                                        </div>
+                                        <div className="dock-value highlight-purple">
+                                            {latestGrowth ? `${latestGrowth.weight} kg` : (profile.babyInfo?.birthWeight ? `${profile.babyInfo.birthWeight}g (sinh)` : '--')}
+                                        </div>
+                                    </div>
+                                    <div className="dock-metric-item">
+                                        <div className="dock-label">
+                                            <IoTrendingUpOutline size={14} /> Chiều dài bé
+                                        </div>
+                                        <div className="dock-value highlight-blue" style={{ color: '#0284c7' }}>
+                                            {latestGrowth ? `${latestGrowth.height} cm` : (profile.babyInfo?.birthHeight ? `${profile.babyInfo.birthHeight} cm (sinh)` : '--')}
+                                        </div>
+                                    </div>
+                                    <div className="dock-metric-item">
+                                        <div className="dock-label">
+                                            <IoMedicalOutline size={14} /> Mũi tiêm tới
+                                        </div>
+                                        <div className="dock-value highlight-pink" style={{ fontSize: '0.85rem' }}>
+                                            {nextVaccine ? nextVaccine.name : 'Đã tiêm đủ'}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="dock-metric-item">
+                                        <div className="dock-label">
+                                            <IoPulseOutline size={14} /> Tuần thai
+                                        </div>
+                                        <div className="dock-value highlight-purple">Tuần {weeks}/40</div>
+                                    </div>
+                                    <div className="dock-metric-item">
+                                        <div className="dock-label">
+                                            <IoCalendarOutline size={14} /> Dự sinh
+                                        </div>
+                                        <div className="dock-value highlight-pink">{eddStr}</div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
 
+                {isPostpartum ? (
+                    <div className="db-body-columns">
+                        <div className="db-left-col">
+                            {/* 1. SINH HOẠT HÔM NAY CỦA BÉ */}
+                            <div className="health-card vitals-grid" style={{
+                                border: '1px solid rgba(244, 114, 182, 0.4)',
+                                boxShadow: '0 20px 40px -15px rgba(236, 72, 153, 0.08)'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(241, 245, 249, 0.8)', paddingBottom: '12px', marginBottom: '12px' }}>
+                                    <h3 className="health-card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span style={{ 
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                            width: '32px', height: '32px', borderRadius: '10px', 
+                                            background: '#fdf2f8', color: '#db2777' 
+                                        }}>
+                                            <IoHeartOutline size={20} />
+                                        </span>
+                                        Sinh hoạt hôm nay của bé
+                                    </h3>
+                                    <Link href="/admin/nhat-ky-be" style={{
+                                        fontSize: '0.78rem',
+                                        color: '#db2777',
+                                        fontWeight: 700,
+                                        textDecoration: 'none',
+                                        background: '#fce7f3',
+                                        padding: '6px 12px',
+                                        borderRadius: '12px'
+                                    }}>
+                                        + Ghi nhật ký
+                                    </Link>
+                                </div>
+
+                                <div className="vitals-grid-inner">
+                                    <div className="vital-box pink">
+                                        <div className="vital-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <IoHeartOutline size={14} color="#db2777" /> Bú mẹ trực tiếp
+                                        </div>
+                                        <div className="vital-value" style={{ color: '#db2777' }}>
+                                            {babyJournalToday.breastMins > 0 ? `${babyJournalToday.breastMins} phút` : 'Chưa ghi'}
+                                        </div>
+                                    </div>
+                                    <div className="vital-box blue">
+                                        <div className="vital-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <IoCafeOutline size={14} color="#0284c7" /> Sữa bình
+                                        </div>
+                                        <div className="vital-value" style={{ color: '#0284c7' }}>
+                                            {babyJournalToday.bottleMl > 0 ? `${babyJournalToday.bottleMl} ml` : 'Chưa ghi'}
+                                        </div>
+                                    </div>
+                                    <div className="vital-box yellow">
+                                        <div className="vital-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <IoWaterOutline size={14} color="#d97706" /> Thay tã
+                                        </div>
+                                        <div className="vital-value" style={{ color: '#d97706' }}>
+                                            {babyJournalToday.wetDiapers + babyJournalToday.dirtyDiapers > 0 
+                                                ? `${babyJournalToday.wetDiapers + babyJournalToday.dirtyDiapers} lần` 
+                                                : 'Chưa ghi'}
+                                            <span style={{ fontSize: '0.72rem', display: 'block', color: '#64748b', fontWeight: 600 }}>
+                                                {babyJournalToday.wetDiapers} ướt • {babyJournalToday.dirtyDiapers} bẩn
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="vital-box purple">
+                                        <div className="vital-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <IoMoonOutline size={14} color="#7c3aed" /> Giấc ngủ ngày
+                                        </div>
+                                        <div className="vital-value" style={{ color: '#7c3aed' }}>
+                                            {Number(babyJournalToday.sleepHours) > 0 ? `${babyJournalToday.sleepHours} giờ` : 'Chưa ghi'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 2. CẨM NANG PHÁT TRIỂN THEO THÁNG TUỔI (BABY MILESTONES) */}
+                            <div className="health-card" style={{
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '24px',
+                                padding: '24px',
+                                background: '#ffffff',
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            width: '32px', height: '32px', borderRadius: '10px',
+                                            background: '#fef3c7', color: '#d97706'
+                                        }}>
+                                            <IoSparklesOutline size={18} />
+                                        </span>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#1e293b' }}>
+                                                {currentMilestone.title}
+                                            </h3>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                {activeMilestoneMonth === babyAge?.months ? '🌟 Mốc tuổi hiện tại của bé' : 'Đang xem tham khảo'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Month Navigation */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '3px 8px', borderRadius: '14px' }}>
+                                        <button 
+                                            onClick={handlePrevMilestone}
+                                            disabled={activeMilestoneMonth <= 0}
+                                            style={{
+                                                background: 'none', border: 'none', cursor: activeMilestoneMonth <= 0 ? 'not-allowed' : 'pointer',
+                                                color: activeMilestoneMonth <= 0 ? '#cbd5e1' : '#1e293b', padding: '4px', display: 'flex'
+                                            }}
+                                        >
+                                            <IoChevronBackOutline size={18} />
+                                        </button>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 800, minWidth: '70px', textAlign: 'center' }}>
+                                            Tháng {activeMilestoneMonth}
+                                        </span>
+                                        <button 
+                                            onClick={handleNextMilestone}
+                                            disabled={activeMilestoneMonth >= 24}
+                                            style={{
+                                                background: 'none', border: 'none', cursor: activeMilestoneMonth >= 24 ? 'not-allowed' : 'pointer',
+                                                color: activeMilestoneMonth >= 24 ? '#cbd5e1' : '#1e293b', padding: '4px', display: 'flex'
+                                            }}
+                                        >
+                                            <IoChevronForwardOutline size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #fdf2f8 0%, #fff1f2 100%)',
+                                    border: '1px solid #fecdd3',
+                                    padding: '14px 18px',
+                                    borderRadius: '16px',
+                                    marginBottom: '16px',
+                                    fontSize: '0.88rem',
+                                    fontWeight: 600,
+                                    color: '#9f1239',
+                                    lineHeight: 1.5
+                                }}>
+                                    ✨ {currentMilestone.headline}
+                                </div>
+
+                                {/* EASY Routine Highlight */}
+                                {currentMilestone.easyRoutine && (
+                                    <div style={{
+                                        background: '#f8fafc',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '16px',
+                                        padding: '16px',
+                                        marginBottom: '16px'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                📅 Lịch sinh hoạt mẫu: {currentMilestone.easyRoutine.name}
+                                            </span>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                Thức chơi: {currentMilestone.easyRoutine.wakeWindow}
+                                            </span>
+                                        </div>
+                                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#475569', lineHeight: 1.5 }}>
+                                            {currentMilestone.easyRoutine.description}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Motor & Language Grid */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '16px', padding: '16px' }}>
+                                        <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            🤸 Vận động (Thô & Tinh)
+                                        </h4>
+                                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.8rem', color: '#1e293b', lineHeight: 1.6 }}>
+                                            {currentMilestone.motorGross.slice(0, 2).map((item, idx) => (
+                                                <li key={idx}>{item}</li>
+                                            ))}
+                                            {currentMilestone.motorFine.slice(0, 1).map((item, idx) => (
+                                                <li key={idx}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '16px', padding: '16px' }}>
+                                        <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', fontWeight: 800, color: '#1e40af', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            🗣️ Ngôn ngữ & Giao tiếp
+                                        </h4>
+                                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.8rem', color: '#1e293b', lineHeight: 1.6 }}>
+                                            {currentMilestone.socialLanguage.slice(0, 2).map((item, idx) => (
+                                                <li key={idx}>{item}</li>
+                                            ))}
+                                            {currentMilestone.sensoryCognitive.slice(0, 1).map((item, idx) => (
+                                                <li key={idx}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                {/* Tips & Red Flags */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div style={{ background: '#fdf4ff', border: '1px solid #f5d0fe', borderRadius: '14px', padding: '12px 16px', fontSize: '0.82rem', color: '#86198f', lineHeight: 1.5 }}>
+                                        <strong>💡 Mẹo tương tác: </strong>
+                                        {currentMilestone.playTips[0]}
+                                    </div>
+                                    <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '14px', padding: '12px 16px', fontSize: '0.8rem', color: '#9f1239', lineHeight: 1.5 }}>
+                                        <strong>⚠️ Dấu hiệu cần theo dõi: </strong>
+                                        {currentMilestone.redFlags[0]}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 3. TĂNG TRƯỞNG & TIÊM CHỦNG CARD */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                                {/* Tăng trưởng WHO */}
+                                <div className="health-card" style={{
+                                    border: '1px solid #e2e8f0', borderRadius: '24px', padding: '20px', background: 'white'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                        <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <IoScaleOutline color="#7c3aed" size={18} /> Tăng trưởng chuẩn WHO
+                                        </h4>
+                                        <Link href="/admin/nhat-ky-be" style={{ fontSize: '0.75rem', color: '#7c3aed', fontWeight: 700, textDecoration: 'none' }}>
+                                            Xem biểu đồ →
+                                        </Link>
+                                    </div>
+                                    <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '16px', marginBottom: '10px' }}>
+                                        <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Số đo mới nhất:</div>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                                            {latestGrowth 
+                                                ? `${latestGrowth.weight} kg • ${latestGrowth.height} cm` 
+                                                : (profile.babyInfo?.birthWeight 
+                                                    ? `${profile.babyInfo.birthWeight}g • ${profile.babyInfo.birthHeight || '--'} cm (lúc sinh)` 
+                                                    : 'Chưa có bản ghi')}
+                                        </div>
+                                        {latestGrowth?.ageMonths !== undefined && (
+                                            <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, marginTop: '4px' }}>
+                                                Ghi nhận lúc: {latestGrowth.ageMonths} tháng tuổi
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', lineHeight: 1.45 }}>
+                                        Mẹ hãy ghi nhận cân nặng và chiều cao của bé định kỳ hàng tháng để so sánh biểu đồ phân vị bách phân vị chuẩn WHO.
+                                    </p>
+                                </div>
+
+                                {/* Tiêm chủng */}
+                                <div className="health-card" style={{
+                                    border: '1px solid #e2e8f0', borderRadius: '24px', padding: '20px', background: 'white'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                        <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <IoMedicalOutline color="#10b981" size={18} /> Lịch tiêm phòng mở rộng
+                                        </h4>
+                                        <Link href="/admin/tiem-chung" style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, textDecoration: 'none' }}>
+                                            Mở sổ tiêm →
+                                        </Link>
+                                    </div>
+                                    {nextVaccine ? (
+                                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '14px', borderRadius: '16px', marginBottom: '10px' }}>
+                                            <div style={{ fontSize: '0.78rem', color: '#166534', fontWeight: 700 }}>
+                                                Mũi tiêm tiếp theo ({nextVaccine.ageGroup}):
+                                            </div>
+                                            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#14532d', marginTop: '2px' }}>
+                                                {nextVaccine.name}
+                                            </div>
+                                            <div style={{ fontSize: '0.78rem', color: nextVaccine.diffDays <= 0 ? '#b91c1c' : '#15803d', fontWeight: 700, marginTop: '4px' }}>
+                                                Dự kiến: {nextVaccine.targetDateStr} ({nextVaccine.diffDays > 0 ? `Còn ${nextVaccine.diffDays} ngày` : nextVaccine.diffDays === 0 ? 'Đến ngày hôm nay!' : `Đã đến lịch (${Math.abs(nextVaccine.diffDays)} ngày trước)`})
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '16px', marginBottom: '10px', fontSize: '0.85rem', color: '#64748b' }}>
+                                            {profile.babyInfo?.dob ? '🎉 Bé đã hoàn thành các mũi tiêm trong mốc hiện tại!' : 'Vui lòng cập nhật ngày sinh của bé trong Cài đặt để tự động lên lịch tiêm.'}
+                                        </div>
+                                    )}
+                                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', lineHeight: 1.45 }}>
+                                        Hệ thống tự động đồng bộ lịch tiêm chủng y khoa theo khuyến nghị Bộ Y tế và CDC Việt Nam.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* 4. DINH DƯỠNG MẸ SAU SINH & LỢI SỮA */}
+                            <div className="health-card" style={{
+                                border: '1px solid #fed7aa',
+                                borderRadius: '24px',
+                                padding: '20px',
+                                background: 'linear-gradient(135deg, #fffaf5 0%, #fff7ed 100%)'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#c2410c', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <IoRestaurantOutline size={18} /> Dinh dưỡng hồi phục sau sinh & Lợi sữa
+                                    </h4>
+                                    <Link href="/admin/dinh-duong" style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 700, textDecoration: 'none' }}>
+                                        Khám phá thực đơn →
+                                    </Link>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '0.82rem', color: '#7c2d12', lineHeight: 1.5 }}>
+                                    <div style={{ background: 'white', padding: '12px', borderRadius: '14px', border: '1px solid #ffedd5' }}>
+                                        <strong>🥛 Lượng nước mỗi ngày:</strong> Duy trì uống từ 2.5 - 3 lít nước ấm hoặc trà gạo lứt/đỗ đen để kích thích tuyến sữa dồi dào.
+                                    </div>
+                                    <div style={{ background: 'white', padding: '12px', borderRadius: '14px', border: '1px solid #ffedd5' }}>
+                                        <strong>🥗 Năng lượng phục hồi:</strong> Mẹ nuôi con bú cần khoảng 1800 - 2200 kcal/ngày, bổ sung protein, sắt và canxi đầy đủ.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
                 <div className="db-body-columns">
                 <div className="db-left-col">
                     {/* 2. CHỈ SỐ THAI KỲ - VITALS CARD */}
@@ -1352,8 +1860,9 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                </div>{/* end db-left-col */}
-                </div>{/* end db-body-columns */}
+                </div>
+                </div>
+                )}
             </div>
 
         </div>
@@ -1441,31 +1950,82 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="profile-modal-body">
-                        <div className="pm-row">
-                            <span className="pm-label">Ngày dự sinh:</span>
-                            <span className="pm-value highlight">{eddStr}</span>
+                        {isPostpartum ? (
+                            <>
+                                <div className="pm-row">
+                                    <span className="pm-label">Em bé:</span>
+                                    <span className="pm-value highlight">{profile.babyInfo?.name || 'Chưa đặt tên'}</span>
+                                </div>
+                                <div className="pm-row">
+                                    <span className="pm-label">Tuổi hiện tại:</span>
+                                    <span className="pm-value highlight" style={{ color: '#db2777' }}>
+                                        {babyAge ? babyAge.ageDisplay : '--'}
+                                    </span>
+                                </div>
+                                <div className="pm-row">
+                                    <span className="pm-label">Giới tính:</span>
+                                    <span className="pm-value">
+                                        {profile.babyInfo?.gender === 'boy' ? '👦 Bé trai' : profile.babyInfo?.gender === 'twins' ? '👶👶 Sinh đôi' : '👧 Bé gái'}
+                                    </span>
+                                </div>
+                                <div className="pm-row">
+                                    <span className="pm-label">Cân nặng sinh:</span>
+                                    <span className="pm-value">{profile.babyInfo?.birthWeight ? `${profile.babyInfo.birthWeight} g` : '--'}</span>
+                                </div>
+                                <div className="pm-row">
+                                    <span className="pm-label">Mẹ bé:</span>
+                                    <span className="pm-value">{profile.name || '--'}</span>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="pm-row">
+                                    <span className="pm-label">Ngày dự sinh:</span>
+                                    <span className="pm-value highlight">{eddStr}</span>
+                                </div>
+                                <div className="pm-row">
+                                    <span className="pm-label">Tuần thai:</span>
+                                    <span className="pm-value highlight">Tuần {weeks}</span>
+                                </div>
+                                <div className="pm-row">
+                                    <span className="pm-label">Nhóm máu:</span>
+                                    <span className="pm-value" style={{color: '#e11d48'}}>{profile.bloodType || '--'}</span>
+                                </div>
+                                <div className="pm-row">
+                                    <span className="pm-label">CCCD:</span>
+                                    <span className="pm-value">{profile.cccd || '--'}</span>
+                                </div>
+                                <div className="pm-row">
+                                    <span className="pm-label">BHYT:</span>
+                                    <span className="pm-value">{profile.bhyt || '--'}</span>
+                                </div>
+                                <div className="pm-row">
+                                    <span className="pm-label">Điện thoại:</span>
+                                    <span className="pm-value">{profile.phoneWife || '--'}</span>
+                                </div>
+                            </>
+                        )}
+
+                        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                            <button
+                                onClick={handleToggleMode}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 14px',
+                                    borderRadius: '14px',
+                                    border: 'none',
+                                    background: isPostpartum ? '#fdf2f8' : '#ede9fe',
+                                    color: isPostpartum ? '#be185d' : '#6d28d9',
+                                    fontWeight: 800,
+                                    fontSize: '0.82rem',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {isPostpartum ? '🔄 Chuyển sang chế độ Thai Kỳ 🤰' : '🔄 Bé đã chào đời? Sang chế độ Nuôi Con 👩‍🍼'}
+                            </button>
                         </div>
-                        <div className="pm-row">
-                            <span className="pm-label">Tuần thai:</span>
-                            <span className="pm-value highlight">Tuần {weeks}</span>
-                        </div>
-                        <div className="pm-row">
-                            <span className="pm-label">Nhóm máu:</span>
-                            <span className="pm-value" style={{color: '#e11d48'}}>{profile.bloodType || '--'}</span>
-                        </div>
-                        <div className="pm-row">
-                            <span className="pm-label">CCCD:</span>
-                            <span className="pm-value">{profile.cccd || '--'}</span>
-                        </div>
-                        <div className="pm-row">
-                            <span className="pm-label">BHYT:</span>
-                            <span className="pm-value">{profile.bhyt || '--'}</span>
-                        </div>
-                        <div className="pm-row">
-                            <span className="pm-label">Điện thoại:</span>
-                            <span className="pm-value">{profile.phoneWife || '--'}</span>
-                        </div>
-                        <div style={{marginTop: '24px', display: 'flex', justifyContent: 'center', gap: '24px'}}>
+
+                        <div style={{marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '24px'}}>
                             <Link href="/admin/toan-canh" className="pm-icon-btn" onClick={() => setShowProfileModal(false)} title="Mở Trang Toàn Cảnh">
                                 <IoHeartOutline size={28} color="#0284c7" />
                             </Link>

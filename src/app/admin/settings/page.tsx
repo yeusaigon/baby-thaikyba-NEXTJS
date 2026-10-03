@@ -16,6 +16,7 @@ import {
     IoShareSocialOutline, IoCloseOutline, IoAddOutline, IoRemoveOutline
 } from 'react-icons/io5';
 import { MENU_DEFS, DEFAULT_MENU_IDS } from '@/components/Sidebar';
+import { computeBabyAgeDetails } from '@/lib/babyMilestones';
 
 export default function SettingsPage() {
     const [user, setUser] = useState<any>(null);
@@ -37,6 +38,15 @@ export default function SettingsPage() {
     const [isExporting, setIsExporting] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+
+    // App Mode & Baby Info States (Postpartum / Nuôi con)
+    const [appMode, setAppMode] = useState<'pregnancy' | 'postpartum'>('pregnancy');
+    const [babyName, setBabyName] = useState('');
+    const [babyDob, setBabyDob] = useState('');
+    const [babyGender, setBabyGender] = useState<'boy' | 'girl' | 'twins'>('girl');
+    const [babyBirthWeight, setBabyBirthWeight] = useState<string | number>('');
+    const [babyBirthHeight, setBabyBirthHeight] = useState<string | number>('');
+    const [babyBirthHeadCircumference, setBabyBirthHeadCircumference] = useState<string | number>('');
 
     // Form inputs matching profile state fields
     const [name, setName] = useState('');
@@ -74,6 +84,15 @@ export default function SettingsPage() {
                         const data = d.data();
                         setProfile(data);
                         setMenuConfig(data.menuConfig || DEFAULT_MENU_IDS);
+                        setAppMode(data.appMode || 'pregnancy');
+                        if (data.babyInfo) {
+                            setBabyName(data.babyInfo.name || '');
+                            setBabyDob(data.babyInfo.dob || '');
+                            setBabyGender(data.babyInfo.gender || 'girl');
+                            setBabyBirthWeight(data.babyInfo.birthWeight ?? '');
+                            setBabyBirthHeight(data.babyInfo.birthHeight ?? '');
+                            setBabyBirthHeadCircumference(data.babyInfo.birthHeadCircumference ?? '');
+                        }
                         
                         // Set default inputs from Firestore
                         setName(data.name || '');
@@ -134,6 +153,7 @@ export default function SettingsPage() {
     };
 
     const lmpInfo = calculateWeeks();
+    const babyAgeInfo = babyDob ? computeBabyAgeDetails(babyDob) : null;
 
     // Format PARA input (4 digits)
     const handleParaInput = (val: string) => {
@@ -264,6 +284,20 @@ export default function SettingsPage() {
         img.src = cropSrc;
     };
 
+    // Quick switch app mode (pregnancy vs postpartum)
+    const handleQuickSwitchMode = async (newMode: 'pregnancy' | 'postpartum') => {
+        setAppMode(newMode);
+        if (!user) return;
+        try {
+            await setDoc(doc(db, "users", user.uid, "settings", "profile"), {
+                ...profile,
+                appMode: newMode
+            }, { merge: true });
+        } catch (err: any) {
+            console.error("Lỗi chuyển chế độ:", err);
+        }
+    };
+
     // Save profile to Firestore
     const handleSaveProfile = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -284,9 +318,18 @@ export default function SettingsPage() {
                 phoneWife,
                 phoneHusband,
                 address,
-                avatar
+                avatar,
+                appMode,
+                babyInfo: {
+                    name: babyName.trim(),
+                    dob: babyDob,
+                    gender: babyGender,
+                    birthWeight: babyBirthWeight !== '' ? Number(babyBirthWeight) : null,
+                    birthHeight: babyBirthHeight !== '' ? Number(babyBirthHeight) : null,
+                    birthHeadCircumference: babyBirthHeadCircumference !== '' ? Number(babyBirthHeadCircumference) : null
+                }
             }, { merge: true });
-            alert("Đã lưu hồ sơ mẹ bầu thành công!");
+            alert("Đã lưu hồ sơ thành công!");
         } catch (err: any) {
             alert("Lỗi khi lưu: " + err.message);
         } finally {
@@ -755,6 +798,72 @@ export default function SettingsPage() {
                     border-color: rgba(124, 58, 237, 0.15);
                     box-shadow: 0 10px 30px rgba(124, 58, 237, 0.05);
                 }
+
+                /* Mode Switcher Banner */
+                .mode-switcher-card {
+                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    border: 1px solid #e2e8f0;
+                    border-radius: 20px;
+                    padding: 18px 20px;
+                    margin-bottom: 24px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 14px;
+                    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
+                }
+                .mode-switcher-icon {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 14px;
+                    background: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.5rem;
+                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+                    flex-shrink: 0;
+                }
+                .mode-btn-container {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
+                    background: rgba(226, 232, 240, 0.5);
+                    padding: 5px;
+                    border-radius: 14px;
+                }
+                .mode-toggle-btn {
+                    padding: 12px 14px;
+                    border-radius: 10px;
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    border: none;
+                    background: transparent;
+                    color: #64748b;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                }
+                .mode-toggle-btn:hover {
+                    color: #1e293b;
+                }
+                .mode-toggle-btn.active-pregnancy {
+                    background: white;
+                    color: #7c3aed;
+                    box-shadow: 0 3px 10px rgba(124, 58, 237, 0.15);
+                }
+                .mode-toggle-btn.active-postpartum {
+                    background: white;
+                    color: #db2777;
+                    box-shadow: 0 3px 10px rgba(219, 39, 119, 0.15);
+                }
+                @media (max-width: 500px) {
+                    .mode-btn-container {
+                        grid-template-columns: 1fr;
+                    }
+                }
                 .accordion-header {
                     padding: 20px 24px;
                     display: flex;
@@ -1130,6 +1239,43 @@ export default function SettingsPage() {
                 {activeSection === 'profile' && (
                     <div id="sec-profile" style={{ padding: '24px', borderTop: '1px solid #f1f5f9' }}>
                         <form onSubmit={handleSaveProfile}>
+                            {/* BỘ CHUYỂN ĐỔI CHẾ ĐỘ THAI KỲ / NUÔI CON */}
+                            <div className="mode-switcher-card">
+                                <div className="mode-switcher-header">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div className="mode-switcher-icon">
+                                            {appMode === 'postpartum' ? '👩‍🍼' : '🤰'}
+                                        </div>
+                                        <div>
+                                            <h4 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#1e293b' }}>
+                                                Chế độ hoạt động: {appMode === 'postpartum' ? 'Sau Sinh & Nuôi Con 👶' : 'Thai Kỳ & Mẹ Bầu 🤰'}
+                                            </h4>
+                                            <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                                                {appMode === 'postpartum' 
+                                                    ? 'Hiển thị tuổi bé theo tháng/ngày, biểu đồ tăng trưởng WHO, nhật ký bú/ngủ & tiêm chủng.'
+                                                    : 'Hiển thị tuần thai, đếm ngày dự sinh, lịch khám thai & cẩm nang dinh dưỡng mẹ bầu.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mode-btn-container">
+                                    <button
+                                        type="button"
+                                        className={`mode-toggle-btn ${appMode === 'pregnancy' ? 'active-pregnancy' : ''}`}
+                                        onClick={() => handleQuickSwitchMode('pregnancy')}
+                                    >
+                                        🤰 Đang mang thai (Thai kỳ)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`mode-toggle-btn ${appMode === 'postpartum' ? 'active-postpartum' : ''}`}
+                                        onClick={() => handleQuickSwitchMode('postpartum')}
+                                    >
+                                        👩‍🍼 Bé đã chào đời (Nuôi con)
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* AVATAR UPLOAD */}
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '28px' }}>
                                 <div className="avatar-container" onClick={() => { if (syncRole !== 'partner') document.getElementById('avatar-input')?.click(); }}>
@@ -1236,6 +1382,101 @@ export default function SettingsPage() {
                                         </div>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* PHÂN NHÓM: THÔNG TIN EM BÉ (SAU SINH & NUÔI CON) */}
+                            <div className="profile-subgroup" style={{ 
+                                border: appMode === 'postpartum' ? '1.5px solid #ec4899' : '1px solid #e2e8f0',
+                                background: appMode === 'postpartum' ? 'rgba(253, 242, 248, 0.4)' : undefined
+                            }}>
+                                <div className="profile-subgroup-title" style={{ color: appMode === 'postpartum' ? '#db2777' : undefined }}>
+                                    <IoHeartOutline size={16} /> Thông tin em bé {appMode === 'postpartum' && <span style={{ fontSize: '0.75rem', color: '#db2777', fontWeight: 800 }}>(Đang kích hoạt 🍼)</span>}
+                                </div>
+                                <div className="input-group">
+                                    <label className="text-label">Tên hoặc Biệt danh của bé</label>
+                                    <input 
+                                        type="text" 
+                                        value={babyName} 
+                                        onChange={(e) => setBabyName(e.target.value)} 
+                                        className="form-input" 
+                                        placeholder="VD: Bé Cá Heo, Bé Dâu Tây, Nguyễn Gia Hưng..." 
+                                    />
+                                </div>
+                                <div className="form-grid-layout">
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label className="text-label">Ngày bé chào đời (DOB)</label>
+                                        <input 
+                                            type="date" 
+                                            value={babyDob} 
+                                            onChange={(e) => setBabyDob(e.target.value)} 
+                                            className="form-input" 
+                                        />
+                                    </div>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label className="text-label">Giới tính của bé</label>
+                                        <select 
+                                            value={babyGender} 
+                                            onChange={(e) => setBabyGender(e.target.value as any)} 
+                                            className="form-input"
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <option value="girl">👧 Bé gái (Princess)</option>
+                                            <option value="boy">👦 Bé trai (Prince)</option>
+                                            <option value="twins">👶👶 Sinh đôi (Twins)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {babyAgeInfo && (
+                                    <div className="calculation-ticket" style={{ marginTop: '14px', background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)', borderColor: '#fbcfe8' }}>
+                                        <div className="ticket-section">
+                                            <span className="ticket-label" style={{ color: '#be185d' }}>Tuổi của bé hiện tại</span>
+                                            <strong className="ticket-val" style={{ color: '#db2777' }}>{babyAgeInfo.ageDisplay}</strong>
+                                        </div>
+                                        <div className="ticket-divider" style={{ backgroundColor: '#f472b6' }}></div>
+                                        <div className="ticket-section">
+                                            <span className="ticket-label" style={{ color: '#be185d' }}>Tổng số ngày từ lúc sinh</span>
+                                            <strong className="ticket-val" style={{ color: '#db2777' }}>
+                                                {babyAgeInfo.totalDays} <span className="days-label">ngày</span>
+                                            </strong>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="form-grid-layout" style={{ marginTop: '14px' }}>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label className="text-label">Cân nặng lúc sinh (gram)</label>
+                                        <input 
+                                            type="number" 
+                                            value={babyBirthWeight} 
+                                            onChange={(e) => setBabyBirthWeight(e.target.value)} 
+                                            className="form-input" 
+                                            placeholder="VD: 3200 (g)" 
+                                        />
+                                    </div>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label className="text-label">Chiều dài lúc sinh (cm)</label>
+                                        <input 
+                                            type="number" 
+                                            step="0.1"
+                                            value={babyBirthHeight} 
+                                            onChange={(e) => setBabyBirthHeight(e.target.value)} 
+                                            className="form-input" 
+                                            placeholder="VD: 50 (cm)" 
+                                        />
+                                    </div>
+                                </div>
+                                <div className="input-group" style={{ marginTop: '14px', marginBottom: 0 }}>
+                                    <label className="text-label">Vòng đầu lúc sinh (cm - tùy chọn)</label>
+                                    <input 
+                                        type="number" 
+                                        step="0.1"
+                                        value={babyBirthHeadCircumference} 
+                                        onChange={(e) => setBabyBirthHeadCircumference(e.target.value)} 
+                                        className="form-input" 
+                                        placeholder="VD: 34.5 (cm)" 
+                                    />
+                                </div>
                             </div>
 
                             {/* PHÂN NHÓM 4: LIÊN HỆ */}
